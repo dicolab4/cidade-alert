@@ -1,6 +1,6 @@
 const pool = require("./db")
 
-async function migrate() {
+async function migrate(){
 
 await pool.query(`
 
@@ -38,8 +38,7 @@ VALUES('admin@admin.com','123456')`
 }
 
 console.log("Migration concluída")
-process.exit()
 
 }
 
-migrate()
+module.exports = migrate
