@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+
+<title>Nova Ocorrência</title>
+<link rel="stylesheet" href="style.css">
+
+</head>
+
+<body>
+
+<h2>Nova Ocorrência</h2>
+
+<input id="descricao" placeholder="Descrição">
+
+<select id="categoria">
+<option value="buraco">Buraco</option>
+<option value="iluminacao">Iluminação</option>
+<option value="mato">Mato alto</option>
+<option value="lixo">Lixo</option>
+</select>
+
+<input type="file" id="foto">
+
+<input id="latitude" placeholder="Latitude">
+<input id="longitude" placeholder="Longitude">
+
+<button onclick="localizacao()">Usar minha localização</button>
+
+<button onclick="salvar()">Salvar ocorrência</button>
+
+<script>
+
+function localizacao(){
+
+navigator.geolocation.getCurrentPosition((pos)=>{
+
+document.getElementById("latitude").value =
+pos.coords.latitude
+
+document.getElementById("longitude").value =
+pos.coords.longitude
+
+})
+
+}
+
+async function salvar(){
+
+const form = new FormData()
+
+form.append("descricao",
+document.getElementById("descricao").value)
+
+form.append("categoria",
+document.getElementById("categoria").value)
+
+form.append("latitude",
+document.getElementById("latitude").value)
+
+form.append("longitude",
+document.getElementById("longitude").value)
+
+form.append("foto",
+document.getElementById("foto").files[0])
+
+await fetch("/api/ocorrencias",{
+
+method:"POST",
+body:form
+
+})
+
+alert("Ocorrência cadastrada")
+
+window.location="dashboard.html"
+
+}
+
+</script>
+
+</body>
+</html>

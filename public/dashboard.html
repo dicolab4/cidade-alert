@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+
+<title>Dashboard</title>
+
+<link rel="stylesheet"
+href="https://unpkg.com/leaflet/dist/leaflet.css"/>
+
+<link rel="stylesheet"
+href="https://unpkg.com/leaflet.markercluster/dist/MarkerCluster.css"/>
+
+<script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+
+<script src="https://unpkg.com/leaflet.markercluster/dist/leaflet.markercluster.js"></script>
+
+<link rel="stylesheet" href="style.css">
+
+</head>
+
+<body>
+
+<h2>Painel de Ocorrências</h2>
+
+<a href="nova-ocorrencia.html">
+<button>Nova ocorrência</button>
+</a>
+
+<select id="filtro" onchange="carregar()">
+
+<option value="">Todas</option>
+<option value="aberto">Abertas</option>
+<option value="concluido">Concluídas</option>
+
+</select>
+
+<p id="contador"></p>
+
+<div id="map"></div>
+
+<div id="lista"></div>
+
+<script src="dashboard.js"></script>
+
+</body>
+
+</html>
+
+<!-- <!DOCTYPE html>
+<html>
+
+<head>
+
+<title>Dashboard</title>
+
+<link rel="stylesheet"
+href="https://unpkg.com/leaflet/dist/leaflet.css"/>
+
+<script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+
+<link rel="stylesheet" href="style.css">
+
+</head>
+
+<body>
+
+<h2>Mapa de Ocorrências</h2>
+
+<div id="map"></div>
+
+<script src="mapa.js"></script>
+
+</body>
+
+</html> -->
