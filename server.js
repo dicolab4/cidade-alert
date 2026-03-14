@@ -35,6 +35,10 @@ app.get("/nova-ocorrencia",(req,res)=>{
 res.sendFile(path.join(__dirname,"public","nova-ocorrencia.html"))
 })
 
+app.get("/mapa",(req,res)=>{
+res.sendFile(path.join(__dirname,"public","mapa.html"))
+})
+
 async function start(){
 
 await migrate()
