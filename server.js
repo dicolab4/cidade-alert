@@ -23,6 +23,18 @@ app.get("/", (req,res)=>{
 res.sendFile(path.join(__dirname,"public","index.html"))
 })
 
+app.get("/login",(req,res)=>{
+res.sendFile(path.join(__dirname,"public","login.html"))
+})
+
+app.get("/dashboard",(req,res)=>{
+res.sendFile(path.join(__dirname,"public","dashboard.html"))
+})
+
+app.get("/nova-ocorrencia",(req,res)=>{
+res.sendFile(path.join(__dirname,"public","nova-ocorrencia.html"))
+})
+
 async function start(){
 
 await migrate()
