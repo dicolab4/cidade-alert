@@ -4,17 +4,34 @@ L.tileLayer(
 "https://tile.openstreetmap.org/{z}/{x}/{y}.png"
 ).addTo(map)
 
-const cluster = L.markerClusterGroup()
+//const cluster = L.markerClusterGroup()
 
-map.addLayer(cluster)
+//map.addLayer(cluster)
+
+// function corCategoria(cat){
+
+// if(cat==="buraco") return "red"
+// if(cat==="iluminacao") return "yellow"
+// if(cat==="mato") return "green"
+
+// return "blue"
+
+// }
+
 
 function corCategoria(cat){
 
-if(cat==="buraco") return "red"
-if(cat==="iluminacao") return "yellow"
 if(cat==="mato") return "green"
 
-return "blue"
+if(cat==="vazamento") return "blue"
+
+if(cat==="buraco") return "black"
+
+if(cat==="iluminacao") return "yellow"
+
+if(cat==="lixo") return "red"
+
+return "gray"
 
 }
 
@@ -60,7 +77,9 @@ Criado em: ${formatarData(o.data_criacao)}<br>
 
 `)
 
-cluster.addLayer(icon)
+//cluster.addLayer(icon)
+
+icon.addTo(map)
 
 listaHTML += `
 <div class="card">
