@@ -1,17 +1,103 @@
 body{
-font-family:Arial;
-margin:40px;
+font-family: 'Segoe UI', Arial, sans-serif;
+background:#f4f6f9;
+margin:0;
+padding:0;
+color:#333;
 }
+
+/* topo */
+
+.header{
+background:#1e88e5;
+color:white;
+padding:20px;
+text-align:center;
+font-size:24px;
+font-weight:bold;
+}
+
+/* container central */
+
+.container{
+max-width:1000px;
+margin:auto;
+padding:30px;
+}
+
+/* botões */
+
+button{
+background:#1e88e5;
+border:none;
+color:white;
+padding:12px 18px;
+margin-top:10px;
+border-radius:6px;
+cursor:pointer;
+font-size:14px;
+}
+
+button:hover{
+background:#1565c0;
+}
+
+/* inputs */
+
+input, select{
+width:100%;
+padding:10px;
+margin-top:10px;
+border-radius:6px;
+border:1px solid #ccc;
+font-size:14px;
+}
+
+/* mapa */
 
 #map{
 height:500px;
 margin-top:20px;
+border-radius:10px;
+overflow:hidden;
 }
 
+/* cards de ocorrências */
+
 .card{
+background:white;
+border-radius:8px;
+padding:15px;
+margin-top:10px;
+box-shadow:0 2px 8px rgba(0,0,0,0.1);
+}
 
-border:1px solid #ddd;
-padding:10px;
-margin:10px 0;
+.card img{
+width:100%;
+max-height:200px;
+object-fit:cover;
+border-radius:6px;
+margin-top:10px;
+}
 
+/* contador */
+
+#contador{
+margin-top:10px;
+font-weight:bold;
+}
+
+/* login box */
+
+.login-box{
+max-width:400px;
+margin:auto;
+background:white;
+padding:30px;
+border-radius:10px;
+box-shadow:0 5px 20px rgba(0,0,0,0.15);
+}
+
+.center{
+text-align:center;
 }
