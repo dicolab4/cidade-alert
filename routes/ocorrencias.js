@@ -1,17 +1,30 @@
+// Rotas para ocorrências
 const express = require("express")
 const router = express.Router()
 const pool = require("../db")
 const multer = require("multer")
+const cloudinary = require("../config/cloudinary")
+const {CloudinaryStorage} = require("multer-storage-cloudinary")
 
-const storage = multer.diskStorage({
-
-destination:"uploads/",
-
-filename:(req,file,cb)=>{
-cb(null,Date.now()+"-"+file.originalname)
-}
-
+// Configuração do multer para upload de fotos para o Cloudinary
+const storage = new CloudinaryStorage({
+    cloudinary: cloudinary,
+    params: {
+        folder: "cidade-alerta",
+        allowed_formats: ["jpg", "jpeg", "png"]
+    }
 })
+
+// Configuração do multer para upload local (descomente se quiser salvar as fotos localmente)
+// const storage = multer.diskStorage({
+
+// destination:"uploads/",
+
+// filename:(req,file,cb)=>{
+// cb(null,Date.now()+"-"+file.originalname)
+// }
+
+// })
 
 const upload = multer({storage})
 
@@ -19,7 +32,9 @@ router.post("/", upload.single("foto"), async (req,res)=>{
 
 const {descricao,categoria,latitude,longitude} = req.body
 
-const foto = req.file.filename
+//const foto = req.file.filename
+
+const foto = req.file.path
 
 await pool.query(
 `INSERT INTO ocorrencias
