@@ -4,20 +4,7 @@ L.tileLayer(
 "https://tile.openstreetmap.org/{z}/{x}/{y}.png"
 ).addTo(map)
 
-//const cluster = L.markerClusterGroup()
-
-//map.addLayer(cluster)
-
-// function corCategoria(cat){
-
-// if(cat==="buraco") return "red"
-// if(cat==="iluminacao") return "yellow"
-// if(cat==="mato") return "green"
-
-// return "blue"
-
-// }
-
+let marcadores = []
 
 function corCategoria(cat){
 
@@ -47,7 +34,9 @@ return d.toLocaleDateString("pt-BR")
 
 async function carregar(){
 
-cluster.clearLayers()
+// remove marcadores antigos
+marcadores.forEach(m => map.removeLayer(m))
+marcadores = []
 
 const res = await fetch("/api/ocorrencias")
 
@@ -61,7 +50,9 @@ const icon = L.circleMarker(
 [o.latitude,o.longitude],
 {
 color:corCategoria(o.categoria),
-radius:8
+radius:8,
+fillColor:corCategoria(o.categoria),
+fillOpacity:0.8
 })
 
 icon.bindPopup(`
@@ -77,9 +68,9 @@ Criado em: ${formatarData(o.data_criacao)}<br>
 
 `)
 
-//cluster.addLayer(icon)
-
 icon.addTo(map)
+
+marcadores.push(icon)
 
 listaHTML += `
 <div class="card">
