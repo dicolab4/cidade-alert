@@ -9,11 +9,26 @@
 </head>
 
 <body>
-<div class="header">
-Nova Ocorrência 
+
+<div class="topbar">
+
+<div class="title">
+Cidade Alerta
+</div>
+
+<div class="user">
+
+<span id="usuario"></span>
+
+<button onclick="logout()">Sair</button>
+
+</div>
+
 </div>
 
 <div class="container">
+
+<button onclick="voltar()">← Voltar</button>
 
 <h2>Cadastrar Ocorrência</h2>
 
@@ -35,7 +50,34 @@ Nova Ocorrência
 
 <button onclick="salvar()">Salvar ocorrência</button>
 
+</div>
+
 <script>
+
+const token = localStorage.getItem("token")
+
+if(!token){
+
+window.location="login"
+
+}
+
+document.getElementById("usuario").innerText =
+"Administrador"
+
+function logout(){
+
+localStorage.removeItem("token")
+
+window.location="login"
+
+}
+
+function voltar(){
+
+window.location="dashboard"
+
+}
 
 function localizacao(){
 
@@ -79,7 +121,7 @@ body:form
 
 alert("Ocorrência cadastrada")
 
-window.location="dashboard.html"
+window.location="dashboard"
 
 }
 

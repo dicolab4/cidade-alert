@@ -21,13 +21,25 @@ href="https://unpkg.com/leaflet.markercluster/dist/MarkerCluster.css"/>
 
 <body>
 
-<div class="header">
-Painel de Ocorrências
+<div class="topbar">
+
+<div class="title">
+Cidade Alerta
+</div>
+
+<div class="user">
+<span id="usuario"></span>
+
+<button onclick="logout()">Sair</button>
+</div>
+
 </div>
 
 <div class="container">
 
-<a href="nova-ocorrencia.html">
+<h2>Painel de Ocorrências</h2>
+
+<a href="nova-ocorrencia">
 <button>Nova ocorrência</button>
 </a>
 
@@ -47,36 +59,31 @@ Painel de Ocorrências
 
 </div>
 
+<script>
+
+const token = localStorage.getItem("token")
+
+if(!token){
+
+window.location="login"
+
+}
+
+document.getElementById("usuario").innerText =
+"Administrador"
+
+function logout(){
+
+localStorage.removeItem("token")
+
+window.location="login"
+
+}
+
+</script>
+
 <script src="dashboard.js"></script>
 
 </body>
 
 </html>
-
-<!-- <!DOCTYPE html>
-<html>
-
-<head>
-
-<title>Dashboard</title>
-
-<link rel="stylesheet"
-href="https://unpkg.com/leaflet/dist/leaflet.css"/>
-
-<script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
-
-<link rel="stylesheet" href="style.css">
-
-</head>
-
-<body>
-
-<h2>Mapa de Ocorrências</h2>
-
-<div id="map"></div>
-
-<script src="mapa.js"></script>
-
-</body>
-
-</html> -->
