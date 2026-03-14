@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+
+<title>Mapa de Ocorrências da Cidade</title>
+
+<link rel="stylesheet"
+href="https://unpkg.com/leaflet/dist/leaflet.css"/>
+
+<link rel="stylesheet"
+href="https://unpkg.com/leaflet.markercluster/dist/MarkerCluster.css"/>
+
+<script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+
+<script src="https://unpkg.com/leaflet.markercluster/dist/leaflet.markercluster.js"></script>
+
+<link rel="stylesheet" href="style.css">
+
+</head>
+
+<body>
+
+<div class="header">
+Consulta Pública de Ocorrências
+</div>
+
+<div class="container">
+
+<button onclick="voltarInicio()">← Voltar</button>
+
+<p>Veja os problemas registrados na cidade.</p>
+
+<div id="map"></div>
+
+<div id="lista"></div>
+
+</div>
+
+<script src="mapa-publico.js"></script>
+
+<script>
+
+function voltarInicio(){
+window.location="index.html"
+}
+
+</script>
+
+</body>
+
+</html>
