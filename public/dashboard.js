@@ -71,7 +71,7 @@ Status: ${o.status}<br>
 
 Criado em: ${formatarData(o.data_criacao)}<br>
 
-<img src="/uploads/${o.foto_url}" width="200">
+<img src="${o.foto_url}" width="200">
 
 <br><br>
 
