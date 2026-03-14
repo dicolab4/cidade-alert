@@ -125,3 +125,13 @@ background:#ff7043;
 padding:8px 12px;
 margin-left:10px;
 }
+
+.status-aberto{
+color:#e53935;
+font-weight:bold;
+}
+
+.status-concluido{
+color:#2e7d32;
+font-weight:bold;
+}
