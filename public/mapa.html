@@ -8,7 +8,12 @@
 <link rel="stylesheet"
 href="https://unpkg.com/leaflet/dist/leaflet.css"/>
 
+<link rel="stylesheet"
+href="https://unpkg.com/leaflet.markercluster/dist/MarkerCluster.css"/>
+
 <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+
+<script src="https://unpkg.com/leaflet.markercluster/dist/leaflet.markercluster.js"></script>
 
 <link rel="stylesheet" href="style.css">
 
@@ -26,6 +31,14 @@ Consulta Pública de Ocorrências
 
 <p>Veja os problemas registrados na cidade.</p>
 
+<select id="filtro" onchange="carregar()">
+
+<option value="">Todas</option>
+<option value="aberto">Abertas</option>
+<option value="concluido">Concluídas</option>
+
+</select>
+
 <div id="map"></div>
 
 <div class="legenda">
@@ -33,13 +46,9 @@ Consulta Pública de Ocorrências
 <b>Legenda</b><br>
 
 <span style="color:green">●</span> Mato<br>
-
 <span style="color:blue">●</span> Vazamento<br>
-
 <span style="color:black">●</span> Buraco<br>
-
 <span style="color:yellow">●</span> Iluminação<br>
-
 <span style="color:red">●</span> Lixo / Entulho
 
 </div>

@@ -4,7 +4,31 @@ L.tileLayer(
 "https://tile.openstreetmap.org/{z}/{x}/{y}.png"
 ).addTo(map)
 
-let marcadores = []
+// CLUSTER
+
+const cluster = L.markerClusterGroup({
+
+iconCreateFunction: function(cluster){
+
+const count = cluster.getChildCount()
+
+let cor = "cluster-small"
+
+if(count > 10) cor = "cluster-medium"
+
+if(count > 30) cor = "cluster-large"
+
+return L.divIcon({
+html:`<div><span>${count}</span></div>`,
+className:`marker-cluster ${cor}`,
+iconSize:L.point(40,40)
+})
+
+}
+
+})
+
+map.addLayer(cluster)
 
 function corCategoria(cat){
 
@@ -34,9 +58,9 @@ return d.toLocaleDateString("pt-BR")
 
 async function carregar(){
 
-// remove marcadores antigos
-marcadores.forEach(m => map.removeLayer(m))
-marcadores = []
+cluster.clearLayers()
+
+const filtro = document.getElementById("filtro").value
 
 const res = await fetch("/api/ocorrencias")
 
@@ -45,6 +69,8 @@ const data = await res.json()
 let listaHTML=""
 
 data.forEach(o=>{
+
+if(filtro && o.status !== filtro) return
 
 const icon = L.circleMarker(
 [o.latitude,o.longitude],
@@ -68,9 +94,7 @@ Criado em: ${formatarData(o.data_criacao)}<br>
 
 `)
 
-icon.addTo(map)
-
-marcadores.push(icon)
+cluster.addLayer(icon)
 
 listaHTML += `
 <div class="card">
