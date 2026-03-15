@@ -6,8 +6,31 @@ L.tileLayer(
 "https://tile.openstreetmap.org/{z}/{x}/{y}.png"
 ).addTo(map)
 
-// lista de marcadores ativos no mapa
-let marcadores = []
+// CLUSTER PERSONALIZADO
+
+const cluster = L.markerClusterGroup({
+
+iconCreateFunction: function(cluster){
+
+const count = cluster.getChildCount()
+
+let cor = "cluster-small"
+
+if(count > 10) cor = "cluster-medium"
+
+if(count > 30) cor = "cluster-large"
+
+return L.divIcon({
+html:`<div><span>${count}</span></div>`,
+className:`marker-cluster ${cor}`,
+iconSize:L.point(40,40)
+})
+
+}
+
+})
+
+map.addLayer(cluster)
 
 function corCategoria(cat){
 
@@ -38,9 +61,7 @@ d.toLocaleTimeString("pt-BR")
 
 async function carregar(){
 
-// remove marcadores antigos
-marcadores.forEach(m => map.removeLayer(m))
-marcadores = []
+cluster.clearLayers()
 
 const filtro = document.getElementById("filtro").value
 
@@ -52,7 +73,6 @@ let listaHTML=""
 
 let contador=0
 
-// contador por categoria
 let categorias={
 buraco:0,
 iluminacao:0,
@@ -67,12 +87,9 @@ if(filtro && o.status!==filtro) return
 
 contador++
 
-// soma categoria
 if(categorias[o.categoria] !== undefined){
 categorias[o.categoria]++
 }
-
-// MARCADOR NO MAPA (somente se não estiver concluído)
 
 if(o.status !== "concluido"){
 
@@ -104,13 +121,9 @@ Concluir
 
 `)
 
-icon.addTo(map)
-
-marcadores.push(icon)
+cluster.addLayer(icon)
 
 }
-
-// LISTA DE OCORRÊNCIAS
 
 listaHTML += `
 <div class="card">
@@ -132,12 +145,8 @@ Status: ${o.status}
 
 })
 
-// TOTAL GERAL
-
 document.getElementById("contador").innerText =
 "Total de ocorrências: "+contador
-
-// CONTADOR POR CATEGORIA
 
 document.getElementById("categorias").innerHTML = `
 <b>Ocorrências por categoria</b><br><br>
@@ -157,9 +166,7 @@ listaHTML
 async function concluir(id){
 
 await fetch("/api/ocorrencias/"+id+"/concluir",{
-
 method:"PUT"
-
 })
 
 alert("Ocorrência concluída")
@@ -168,5 +175,4 @@ carregar()
 
 }
 
-// carrega ao abrir
 carregar()
