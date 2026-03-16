@@ -5723,7 +5723,7 @@ if (usuariosCount.rows[0].count === '0') {
     // Admin Volta Redonda
     await pool.query(`
     INSERT INTO usuarios (email, senha, cidade_ibge) 
-    VALUES ('admin@admin.com', '123456', 3306305)
+    VALUES ('voltaredonda@admin.com', '123456', 3306305)
     ON CONFLICT (email) DO NOTHING;
     `)
     
