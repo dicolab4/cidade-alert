@@ -5,12 +5,12 @@ async function migrate(){
 // ===========================================
 // LIMPEZA TOTAL - Descomente APENAS para reset completo
 // ===========================================
- console.log("🧹 Limpando banco de dados...")
- await pool.query(`DROP TABLE IF EXISTS ocorrencias CASCADE;`)
- await pool.query(`DROP TABLE IF EXISTS usuarios CASCADE;`)
- await pool.query(`DROP TABLE IF EXISTS cidades CASCADE;`)
- await pool.query(`DROP TABLE IF EXISTS estados CASCADE;`)
- console.log("✅ Banco limpo!")
+// console.log("🧹 Limpando banco de dados...")
+// await pool.query(`DROP TABLE IF EXISTS ocorrencias CASCADE;`)
+// await pool.query(`DROP TABLE IF EXISTS usuarios CASCADE;`)
+// await pool.query(`DROP TABLE IF EXISTS cidades CASCADE;`)
+// await pool.query(`DROP TABLE IF EXISTS estados CASCADE;`)
+// console.log("✅ Banco limpo!")
 
 // ===========================================
 // CRIAÇÃO DAS TABELAS (APENAS SE NÃO EXISTIREM)
