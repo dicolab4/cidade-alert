@@ -105,12 +105,12 @@ BEGIN
 END $$;
 `)
 
-// Admin Volta Redonda comentar depois da primeira execução para evitar duplicidade
-    await pool.query(`
-    INSERT INTO usuarios (email, senha, cidade_ibge, tipo, ativo, created_at) 
-    VALUES ('admin@admin.com', '123456', 3306305, 1, TRUE, NOW())
-    ON CONFLICT (email) DO NOTHING;
-    `)
+// // Admin Volta Redonda comentar depois da primeira execução para evitar duplicidade
+//     await pool.query(`
+//     INSERT INTO usuarios (email, senha, cidade_ibge, tipo, ativo, created_at) 
+//     VALUES ('admin@admin.com', '123456', 3306305, 1, TRUE, NOW())
+//     ON CONFLICT (email) DO NOTHING;
+//     `)
 
 console.log("✅ Campos adicionados à tabela usuarios")
 
