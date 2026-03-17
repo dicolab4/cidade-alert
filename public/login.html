@@ -62,6 +62,173 @@
             display: block;
             margin-bottom: 5px;
         }
+        .admin-badge {
+            background: #f44336;
+            color: white;
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-size: 0.8em;
+            margin-left: 5px;
+        }
+    </style>
+</head>
+
+<body>
+
+<div class="header">
+    Cidade Alerta
+</div>
+
+<div class="container">
+    <div class="login-box">
+        <h2>🔐 Login</h2>
+        
+        <input id="email" type="email" placeholder="Email" value="voltaredonda@admin.com">
+        <input id="senha" type="password" placeholder="Senha" value="123456">
+        
+        <button onclick="login()">Entrar</button>
+        
+        <div id="error" class="error-message"></div>
+        
+        <div class="info-box">
+            <small><strong>👤 Contas de teste:</strong></small>
+            <small>📍 Volta Redonda (Admin): voltaredonda@admin.com / 123456</small>
+            <small>📍 Barra Mansa (Admin): barramansa@admin.com / 123456</small>
+            <small>📍 Usuário comum: usuario@admin.com / 123456</small>
+        </div>
+    </div>
+</div>
+
+<script>
+async function login() {
+    const email = document.getElementById("email").value
+    const senha = document.getElementById("senha").value
+    const errorDiv = document.getElementById("error")
+    
+    // Limpar mensagem de erro anterior
+    errorDiv.innerText = ''
+    
+    // Validação básica
+    if (!email || !senha) {
+        errorDiv.innerText = 'Preencha todos os campos'
+        return
+    }
+    
+    try {
+        const res = await fetch("/api/auth/login", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ email, senha })
+        })
+
+        const data = await res.json()
+
+        if (res.ok && data.token) {
+            // Salvar token no localStorage
+            localStorage.setItem("token", data.token)
+            
+            // Salvar dados do usuário no localStorage
+            if (data.usuario) {
+                localStorage.setItem("usuario", JSON.stringify(data.usuario))
+                console.log("✅ Usuário logado:", data.usuario)
+            }
+            
+            // Redirecionar baseado no tipo de usuário
+            // (precisamos do tipo no objeto usuario)
+            if (data.usuario && data.usuario.tipo === 1) {
+                // Admin (tipo 1) vai para o painel admin
+                console.log("👑 Redirecionando para painel admin")
+                window.location = "/admin"
+            } else {
+                // Usuários comuns e moderadores vão para o dashboard
+                console.log("📊 Redirecionando para dashboard")
+                window.location = "/dashboard"
+            }
+        } else {
+            // Mostrar mensagem de erro do servidor
+            errorDiv.innerText = data.erro || "E-mail ou senha inválidos"
+        }
+    } catch (error) {
+        console.error('Erro no login:', error)
+        errorDiv.innerText = 'Erro de conexão com o servidor'
+    }
+}
+
+// Permitir login com a tecla Enter
+document.addEventListener('keypress', function(e) {
+    if (e.key === 'Enter') {
+        login()
+    }
+})
+</script>
+
+</body>
+</html>
+
+<!-- <!DOCTYPE html>
+<html>
+
+<head>
+    <title>Login - Cidade Alerta</title>
+    <link rel="stylesheet" href="style.css">
+    <style>
+        /* Estilos adicionais para melhorar a aparência */
+        .login-box {
+            max-width: 400px;
+            margin: 50px auto;
+            padding: 30px;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .login-box h2 {
+            color: #1976D2;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+        .login-box input {
+            width: 100%;
+            padding: 12px;
+            margin-bottom: 15px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 16px;
+            box-sizing: border-box;
+        }
+        .login-box input:focus {
+            outline: none;
+            border-color: #1976D2;
+        }
+        .login-box button {
+            width: 100%;
+            padding: 12px;
+            background: #1976D2;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            font-size: 16px;
+            cursor: pointer;
+        }
+        .login-box button:hover {
+            background: #1565C0;
+        }
+        .error-message {
+            color: #f44336;
+            margin-top: 10px;
+            text-align: center;
+        }
+        .info-box {
+            margin-top: 20px;
+            padding: 15px;
+            background: #f5f5f5;
+            border-radius: 4px;
+            font-size: 0.9em;
+            color: #666;
+        }
+        .info-box small {
+            display: block;
+            margin-bottom: 5px;
+        }
     </style>
 </head>
 
@@ -145,7 +312,7 @@ document.addEventListener('keypress', function(e) {
 </script>
 
 </body>
-</html>
+</html> -->
 
 <!-- <!DOCTYPE html>
 <html>

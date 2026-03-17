@@ -1,6 +1,329 @@
 <!DOCTYPE html>
 <html>
 <head>
+    <title>Admin - Cidade Alerta</title>
+    <link rel="stylesheet" href="style.css">
+    <style>
+        .admin-container { padding: 20px; }
+        .stats-grid { 
+            display: grid; 
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px; 
+            margin-bottom: 30px;
+        }
+        .stat-card {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            text-align: center;
+        }
+        .stat-card h3 { margin: 0 0 10px 0; color: #666; }
+        .stat-card .number { font-size: 2em; font-weight: bold; color: #1976D2; }
+        table { 
+            width: 100%; 
+            border-collapse: collapse; 
+            background: white;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        th, td { 
+            padding: 12px; 
+            text-align: left; 
+            border-bottom: 1px solid #ddd;
+        }
+        th { background: #1976D2; color: white; }
+        tr:hover { background: #f5f5f5; }
+        .btn { 
+            padding: 5px 10px; 
+            border: none; 
+            border-radius: 4px; 
+            cursor: pointer;
+            margin: 0 2px;
+        }
+        .btn-edit { background: #FFC107; color: black; }
+        .btn-toggle { background: #f44336; color: white; }
+        .btn-add { 
+            background: #4CAF50; 
+            color: white; 
+            padding: 10px 20px;
+            margin-bottom: 20px;
+        }
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.5);
+        }
+        .modal-content {
+            background: white;
+            width: 90%;
+            max-width: 500px;
+            margin: 50px auto;
+            padding: 20px;
+            border-radius: 8px;
+        }
+        .modal input, .modal select {
+            width: 100%;
+            padding: 8px;
+            margin: 10px 0;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+        .tipo-admin { color: #f44336; font-weight: bold; }
+        .tipo-moderador { color: #FF9800; }
+        .ativo { color: #4CAF50; }
+        .inativo { color: #f44336; }
+    </style>
+</head>
+<body>
+    <div class="topbar">
+        <div class="title">Cidade Alerta - Admin</div>
+        <div class="user">
+            <span id="usuario"></span>
+            <button onclick="logout()">Sair</button>
+        </div>
+    </div>
+
+    <div class="admin-container">
+        <h1>Painel Administrativo</h1>
+        
+        <!-- Estatísticas -->
+        <div class="stats-grid" id="stats">
+            <div class="stat-card">
+                <h3>Total Usuários</h3>
+                <div class="number" id="totalUsuarios">0</div>
+            </div>
+            <div class="stat-card">
+                <h3>Total Ocorrências</h3>
+                <div class="number" id="totalOcorrencias">0</div>
+            </div>
+            <div class="stat-card">
+                <h3>Admins</h3>
+                <div class="number" id="totalAdmins">0</div>
+            </div>
+            <div class="stat-card">
+                <h3>Moderadores</h3>
+                <div class="number" id="totalModeradores">0</div>
+            </div>
+        </div>
+
+        <!-- Botão adicionar -->
+        <button class="btn-add" onclick="abrirModal()">➕ Novo Usuário</button>
+
+        <!-- Tabela de usuários -->
+        <table>
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Email</th>
+                    <th>Cidade</th>
+                    <th>Tipo</th>
+                    <th>Status</th>
+                    <th>Criado em</th>
+                    <th>Ações</th>
+                </tr>
+            </thead>
+            <tbody id="tabelaUsuarios">
+                <tr><td colspan="7">Carregando...</td></tr>
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Modal para criar/editar usuário -->
+    <div id="modal" class="modal">
+        <div class="modal-content">
+            <h2 id="modalTitulo">Novo Usuário</h2>
+            <input type="hidden" id="usuarioId">
+            
+            <label>Email:</label>
+            <input type="email" id="email" placeholder="email@exemplo.com">
+            
+            <label>Senha:</label>
+            <input type="password" id="senha" placeholder="••••••••">
+            
+            <label>Cidade:</label>
+            <select id="cidade">
+                <option value="">Selecione uma cidade</option>
+            </select>
+            
+            <label>Tipo:</label>
+            <select id="tipo">
+                <option value="3">Usuário Comum</option>
+                <option value="2">Moderador</option>
+                <option value="1">Administrador</option>
+            </select>
+            
+            <label>
+                <input type="checkbox" id="ativo" checked> Ativo
+            </label>
+            
+            <div style="display: flex; gap: 10px; margin-top: 20px;">
+                <button onclick="salvarUsuario()" style="flex:1; background:#4CAF50; color:white;">Salvar</button>
+                <button onclick="fecharModal()" style="flex:1; background:#f44336; color:white;">Cancelar</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const token = localStorage.getItem("token")
+        if (!token) window.location = "login"
+
+        // Carregar dados iniciais
+        carregarUsuarios()
+        carregarCidades()
+        carregarEstatisticas()
+
+        async function carregarUsuarios() {
+            const res = await fetch("/api/admin/usuarios", {
+                headers: { "Authorization": `Bearer ${token}` }
+            })
+            const usuarios = await res.json()
+            
+            let html = ""
+            usuarios.forEach(u => {
+                html += `
+                    <tr>
+                        <td>${u.id}</td>
+                        <td>${u.email}</td>
+                        <td>${u.cidade_nome || '-'} ${u.uf || ''}</td>
+                        <td class="${u.tipo === 1 ? 'tipo-admin' : u.tipo === 2 ? 'tipo-moderador' : ''}">
+                            ${u.tipo === 1 ? 'Admin' : u.tipo === 2 ? 'Moderador' : 'Comum'}
+                        </td>
+                        <td class="${u.ativo ? 'ativo' : 'inativo'}">
+                            ${u.ativo ? 'Ativo' : 'Inativo'}
+                        </td>
+                        <td>${new Date(u.created_at).toLocaleDateString()}</td>
+                        <td>
+                            <button class="btn btn-edit" onclick="editarUsuario(${u.id})">✏️</button>
+                            <button class="btn btn-toggle" onclick="toggleUsuario(${u.id})">
+                                ${u.ativo ? '🔴' : '🟢'}
+                            </button>
+                        </td>
+                    </tr>
+                `
+            })
+            document.getElementById("tabelaUsuarios").innerHTML = html
+        }
+
+        async function carregarCidades() {
+            const res = await fetch("/api/cidades")
+            const cidades = await res.json()
+            
+            let options = '<option value="">Selecione uma cidade</option>'
+            cidades.forEach(c => {
+                options += `<option value="${c.codigo_ibge}">${c.nome} - ${c.uf}</option>`
+            })
+            document.getElementById("cidade").innerHTML = options
+        }
+
+        async function carregarEstatisticas() {
+            const res = await fetch("/api/admin/estatisticas", {
+                headers: { "Authorization": `Bearer ${token}` }
+            })
+            const stats = await res.json()
+            
+            document.getElementById("totalUsuarios").textContent = stats.total_usuarios
+            document.getElementById("totalOcorrencias").textContent = stats.total_ocorrencias
+            document.getElementById("totalAdmins").textContent = stats.usuarios_por_tipo.admins
+            document.getElementById("totalModeradores").textContent = stats.usuarios_por_tipo.moderadores
+        }
+
+        function abrirModal(usuario = null) {
+            document.getElementById("modalTitulo").textContent = usuario ? "Editar Usuário" : "Novo Usuário"
+            document.getElementById("usuarioId").value = usuario ? usuario.id : ""
+            document.getElementById("email").value = usuario ? usuario.email : ""
+            document.getElementById("senha").value = ""
+            document.getElementById("cidade").value = usuario ? usuario.codigo_ibge : ""
+            document.getElementById("tipo").value = usuario ? usuario.tipo : 3
+            document.getElementById("ativo").checked = usuario ? usuario.ativo : true
+            document.getElementById("modal").style.display = "block"
+        }
+
+        function fecharModal() {
+            document.getElementById("modal").style.display = "none"
+        }
+
+        async function salvarUsuario() {
+            const id = document.getElementById("usuarioId").value
+            const dados = {
+                email: document.getElementById("email").value,
+                senha: document.getElementById("senha").value,
+                cidade_ibge: document.getElementById("cidade").value || null,
+                tipo: parseInt(document.getElementById("tipo").value),
+                ativo: document.getElementById("ativo").checked
+            }
+
+            if (!dados.email) {
+                alert("Email é obrigatório")
+                return
+            }
+
+            if (!id && !dados.senha) {
+                alert("Senha é obrigatória para novo usuário")
+                return
+            }
+
+            const url = id ? `/api/admin/usuarios/${id}` : "/api/admin/usuarios"
+            const method = id ? "PUT" : "POST"
+
+            const res = await fetch(url, {
+                method,
+                headers: {
+                    "Content-Type": "application/json",
+                    "Authorization": `Bearer ${token}`
+                },
+                body: JSON.stringify(dados)
+            })
+
+            if (res.ok) {
+                alert(id ? "Usuário atualizado!" : "Usuário criado!")
+                fecharModal()
+                carregarUsuarios()
+                carregarEstatisticas()
+            } else {
+                const erro = await res.json()
+                alert("Erro: " + (erro.error || "Erro desconhecido"))
+            }
+        }
+
+        async function editarUsuario(id) {
+            const res = await fetch(`/api/admin/usuarios/${id}`, {
+                headers: { "Authorization": `Bearer ${token}` }
+            })
+            const usuario = await res.json()
+            abrirModal(usuario)
+        }
+
+        async function toggleUsuario(id) {
+            if (!confirm("Deseja alterar o status deste usuário?")) return
+            
+            const res = await fetch(`/api/admin/usuarios/${id}/toggle`, {
+                method: "PATCH",
+                headers: { "Authorization": `Bearer ${token}` }
+            })
+            
+            if (res.ok) {
+                carregarUsuarios()
+            } else {
+                alert("Erro ao alterar status")
+            }
+        }
+
+        function logout() {
+            localStorage.removeItem("token")
+            localStorage.removeItem("usuario")
+            window.location = "login"
+        }
+    </script>
+</body>
+</html>
+
+<!-- <!DOCTYPE html>
+<html>
+<head>
 <link rel="stylesheet" href="style.css">
 </head>
 
@@ -39,4 +362,4 @@ window.location="dashboard.html"
 </script>
 
 </body>
-</html>
+</html> -->
