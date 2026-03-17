@@ -55,6 +55,65 @@ CREATE TABLE IF NOT EXISTS usuarios (
 );
 `)
 
+// ===========================================
+// ATUALIZAR TABELA USUARIOS (ADICIONAR CAMPOS)
+// ===========================================
+console.log("👑 Verificando campos da tabela usuarios...")
+
+// Adicionar coluna tipo (1=admin, 2=moderador, 3=usuário comum)
+await pool.query(`
+DO $$ 
+BEGIN 
+    IF NOT EXISTS (
+        SELECT 1 
+        FROM information_schema.columns 
+        WHERE table_name='usuarios' AND column_name='tipo'
+    ) THEN
+        ALTER TABLE usuarios 
+        ADD COLUMN tipo INTEGER DEFAULT 3;
+    END IF;
+END $$;
+`)
+
+// Adicionar coluna ativo (boolean)
+await pool.query(`
+DO $$ 
+BEGIN 
+    IF NOT EXISTS (
+        SELECT 1 
+        FROM information_schema.columns 
+        WHERE table_name='usuarios' AND column_name='ativo'
+    ) THEN
+        ALTER TABLE usuarios 
+        ADD COLUMN ativo BOOLEAN DEFAULT true;
+    END IF;
+END $$;
+`)
+
+// Adicionar coluna created_at (data de criação)
+await pool.query(`
+DO $$ 
+BEGIN 
+    IF NOT EXISTS (
+        SELECT 1 
+        FROM information_schema.columns 
+        WHERE table_name='usuarios' AND column_name='created_at'
+    ) THEN
+        ALTER TABLE usuarios 
+        ADD COLUMN created_at TIMESTAMP DEFAULT NOW();
+    END IF;
+END $$;
+`)
+
+// Admin Volta Redonda comentar depois da primeira execução para evitar duplicidade
+    await pool.query(`
+    INSERT INTO usuarios (email, senha, cidade_ibge, tipo, ativo, created_at) 
+    VALUES ('admin@admin.com', '123456', 3306305, 1, TRUE, NOW())
+    ON CONFLICT (email) DO NOTHING;
+    `)
+
+console.log("✅ Campos adicionados à tabela usuarios")
+
 // 4. Criar tabela de ocorrencias
 console.log("📝 Verificando/criando tabela ocorrencias...")
 await pool.query(`
@@ -5719,18 +5778,25 @@ if (cidadesCount.rows[0].count === '0') {
 const usuariosCount = await pool.query("SELECT COUNT(*) FROM usuarios")
 if (usuariosCount.rows[0].count === '0') {
     console.log("👑 Criando usuários admin...")
+
+    // Admin Volta Redonda comentar depois da primeira execução para evitar duplicidade
+    await pool.query(`
+    INSERT INTO usuarios (email, senha, cidade_ibge, tipo, ativo, created_at) 
+    VALUES ('admin@admin.com', '123456', 3306305, 1, TRUE, NOW())
+    ON CONFLICT (email) DO NOTHING;
+    `)
     
     // Admin Volta Redonda
     await pool.query(`
-    INSERT INTO usuarios (email, senha, cidade_ibge) 
-    VALUES ('voltaredonda@admin.com', '123456', 3306305)
+    INSERT INTO usuarios (email, senha, cidade_ibge, tipo, ativo, created_at) 
+    VALUES ('voltaredonda@admin.com', '123456', 3306305, 3, TRUE, NOW())
     ON CONFLICT (email) DO NOTHING;
     `)
     
     // Admin Barra Mansa
     await pool.query(`
-    INSERT INTO usuarios (email, senha, cidade_ibge) 
-    VALUES ('barramansa@admin.com', '123456', 3300407)
+    INSERT INTO usuarios (email, senha, cidade_ibge, tipo, ativo, created_at) 
+    VALUES ('barramansa@admin.com', '123456', 3300407, 3, TRUE, NOW())
     ON CONFLICT (email) DO NOTHING;
     `)
     
