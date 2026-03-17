@@ -7,7 +7,7 @@ async function migrate(){
 // ===========================================
 // console.log("🧹 Limpando banco de dados...")
 // await pool.query(`DROP TABLE IF EXISTS ocorrencias CASCADE;`)
-// await pool.query(`DROP TABLE IF EXISTS usuarios CASCADE;`)
+await pool.query(`DROP TABLE IF EXISTS usuarios CASCADE;`)
 // await pool.query(`DROP TABLE IF EXISTS cidades CASCADE;`)
 // await pool.query(`DROP TABLE IF EXISTS estados CASCADE;`)
 // console.log("✅ Banco limpo!")
