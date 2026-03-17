@@ -9,6 +9,7 @@ const auth = require("./routes/auth")
 const cidades = require("./routes/cidades")
 const estados = require("./routes/estados")  // NOVA ROTA
 const migrate = require("./migrate")
+const admin = require("./routes/admin")
 
 const app = express()
 
@@ -23,6 +24,7 @@ app.use("/api/ocorrencias", ocorrencias)
 app.use("/api/auth", auth)
 app.use("/api/cidades", cidades)
 app.use("/api/estados", estados)  // NOVA ROTA
+app.use("/api/admin", admin)
 
 // Rotas do frontend
 app.get("/", (req,res)=>{
@@ -43,6 +45,11 @@ app.get("/nova-ocorrencia",(req,res)=>{
 
 app.get("/mapa",(req,res)=>{
     res.sendFile(path.join(__dirname,"public","mapa.html"))
+})
+
+// Adicione esta rota no server.js
+app.get("/admin", (req,res)=>{
+    res.sendFile(path.join(__dirname,"public","admin.html"))
 })
 
 async function start(){
