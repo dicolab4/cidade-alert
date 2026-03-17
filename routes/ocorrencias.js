@@ -47,7 +47,7 @@ router.get("/", async (req,res)=>{
 })
 
 // Rota protegida - criar ocorrência
-router.post("/", auth, upload.single("foto"), async (req,res)=>{
+router.post("/", upload.single("foto"), async (req,res)=>{
     try {
         const {descricao, categoria, latitude, longitude} = req.body
         
