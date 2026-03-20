@@ -205,10 +205,42 @@ router.get("/usuarios/:id", auth, isAdmin, async (req, res) => {
 })
 
 // Estatísticas do sistema
+// router.get("/estatisticas", auth, isAdmin, async (req, res) => {
+//     try {
+//         const totalUsuarios = await pool.query("SELECT COUNT(*) FROM usuarios")
+//         const totalOcorrencias = await pool.query("SELECT COUNT(*) FROM ocorrencias")
+//         const usuariosPorTipo = await pool.query(`
+//             SELECT 
+//                 SUM(CASE WHEN tipo = 1 THEN 1 ELSE 0 END) as admins,
+//                 SUM(CASE WHEN tipo = 2 THEN 1 ELSE 0 END) as moderadores,
+//                 SUM(CASE WHEN tipo = 3 THEN 1 ELSE 0 END) as comuns
+//             FROM usuarios
+//         `)
+//         const ocorrenciasPorStatus = await pool.query(`
+//             SELECT status, COUNT(*) 
+//             FROM ocorrencias 
+//             GROUP BY status
+//         `)
+        
+//         res.json({
+//             total_usuarios: parseInt(totalUsuarios.rows[0].count),
+//             total_ocorrencias: parseInt(totalOcorrencias.rows[0].count),
+//             usuarios_por_tipo: usuariosPorTipo.rows[0],
+//             ocorrencias_por_status: ocorrenciasPorStatus.rows
+//         })
+        
+//     } catch (error) {
+//         console.error("Erro ao buscar estatísticas:", error)
+//         res.status(500).json({ error: "Erro ao buscar estatísticas" })
+//     }
+// })
+
+// Atualizar estatísticas com total de mensagens
 router.get("/estatisticas", auth, isAdmin, async (req, res) => {
     try {
         const totalUsuarios = await pool.query("SELECT COUNT(*) FROM usuarios")
         const totalOcorrencias = await pool.query("SELECT COUNT(*) FROM ocorrencias")
+        const totalMensagens = await pool.query("SELECT COUNT(*) FROM mensagens")
         const usuariosPorTipo = await pool.query(`
             SELECT 
                 SUM(CASE WHEN tipo = 1 THEN 1 ELSE 0 END) as admins,
@@ -225,6 +257,7 @@ router.get("/estatisticas", auth, isAdmin, async (req, res) => {
         res.json({
             total_usuarios: parseInt(totalUsuarios.rows[0].count),
             total_ocorrencias: parseInt(totalOcorrencias.rows[0].count),
+            total_mensagens: parseInt(totalMensagens.rows[0].count),
             usuarios_por_tipo: usuariosPorTipo.rows[0],
             ocorrencias_por_status: ocorrenciasPorStatus.rows
         })
