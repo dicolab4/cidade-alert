@@ -92,6 +92,22 @@ function checkText(text) {
     };
 }
 
+/**
+ * Função auxiliar para obter ID do usuário
+ */
+async function getUsuarioId(usuario_id, usuario_uuid) {
+    if (usuario_id) {
+        return usuario_id;
+    } else if (usuario_uuid) {
+        const user = await pool.query(
+            "SELECT id FROM usuarios WHERE uuid = $1",
+            [usuario_uuid]
+        );
+        return user.rows.length > 0 ? user.rows[0].id : null;
+    }
+    return null;
+}
+
 // ===========================================
 // ROTAS
 // ===========================================
@@ -129,7 +145,7 @@ router.get("/", async (req,res)=>{
 // POST / - Criar ocorrência (COM MODERAÇÃO)
 router.post("/", upload.single("foto"), async (req,res)=>{
     try {
-        const {descricao, categoria, latitude, longitude, cidade_ibge} = req.body
+        const {descricao, categoria, latitude, longitude, cidade_ibge, usuario_id, usuario_uuid} = req.body
         
         // ===========================================
         // VALIDAÇÕES BÁSICAS
@@ -145,6 +161,11 @@ router.post("/", upload.single("foto"), async (req,res)=>{
         if (!descricao || descricao.trim().length < 5) {
             return res.status(400).json({ error: "Descrição muito curta" })
         }
+
+        // ===========================================
+        // OBTER ID DO USUÁRIO
+        // ===========================================
+        const usuarioIdFinal = await getUsuarioId(usuario_id, usuario_uuid);
 
         // ===========================================
         // MODERAÇÃO DE TEXTO
@@ -185,17 +206,20 @@ router.post("/", upload.single("foto"), async (req,res)=>{
             { folder: "cidade-alerta" }
         );
 
-        // Salvar no banco
+        // ===========================================
+        // SALVAR NO BANCO
+        // ===========================================
         await pool.query(
             `INSERT INTO ocorrencias
-            (descricao, categoria, latitude, longitude, foto_url, cidade_ibge)
-            VALUES($1, $2, $3, $4, $5, $6)`,
-            [textCheck.clean, categoria, latitude, longitude, uploadResult.secure_url, cidade_ibge]
+             (descricao, categoria, latitude, longitude, foto_url, cidade_ibge, usuario_id)
+             VALUES($1, $2, $3, $4, $5, $6, $7)`,
+            [textCheck.clean, categoria, latitude, longitude, uploadResult.secure_url, cidade_ibge, usuarioIdFinal]
         )
 
         console.log("✅ Ocorrência criada com sucesso:", {
             cidade: cidade_ibge,
-            categoria: categoria
+            categoria: categoria,
+            usuario_id: usuarioIdFinal
         });
 
         res.json({
