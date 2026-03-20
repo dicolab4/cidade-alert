@@ -38,6 +38,137 @@ href="https://unpkg.com/leaflet.markercluster/dist/MarkerCluster.css"/>
 Cidade Alerta
 </div>
 
+<div class="topbar">
+    <div class="title">
+        Cidade Alerta
+    </div>
+    <div class="user">
+        <div style="text-align: right;">
+            <span id="usuario"></span>
+            <div id="cidade-info"></div>
+            <small id="mensagens-info" style="color: #ffeb3b;"></small>
+        </div>
+        <button onclick="logout()">Sair</button>
+    </div>
+</div>
+
+<div class="user">
+<div style="text-align: right;">
+    <span id="usuario"></span>
+    <div id="cidade-info"></div>
+</div>
+<button onclick="logout()">Sair</button>
+</div>
+
+</div>
+
+<div class="container">
+
+<h2>Painel de Ocorrências</h2>
+
+<a href="nova-ocorrencia">
+<button>Nova ocorrência</button>
+</a>
+
+<select id="filtro" onchange="carregar()">
+
+<option value="">Todas</option>
+<option value="aberto">Abertas</option>
+<option value="concluido">Concluídas</option>
+
+</select>
+
+<p id="contador"></p>
+
+<div id="categorias" style="margin-bottom:20px;"></div>
+
+<div id="map"></div>
+
+<div id="lista"></div>
+
+</div>
+
+<script>
+
+const token = localStorage.getItem("token")
+
+if(!token){
+    window.location="login"
+}
+
+// Recuperar dados do usuário
+const usuarioSalvo = localStorage.getItem("usuario")
+if (usuarioSalvo) {
+    try {
+        const userData = JSON.parse(usuarioSalvo)
+        document.getElementById("usuario").innerText = userData.email || "Administrador"
+        
+        // Mostrar cidade
+        const cidadeInfo = document.getElementById("cidade-info")
+        if (userData.cidade_nome && userData.estado_uf) {
+            cidadeInfo.innerHTML = `<small>📍 ${userData.cidade_nome} - ${userData.estado_uf}</small>`
+        }
+    } catch (e) {
+        document.getElementById("usuario").innerText = "Administrador"
+    }
+} else {
+    document.getElementById("usuario").innerText = "Administrador"
+}
+
+function logout(){
+    localStorage.removeItem("token")
+    localStorage.removeItem("usuario")
+    window.location="login"
+}
+
+</script>
+
+<script src="dashboard.js"></script>
+
+</body>
+
+</html>
+
+<!-- <!DOCTYPE html>
+<html>
+
+<head>
+
+<title>Dashboard</title>
+
+<link rel="stylesheet"
+href="https://unpkg.com/leaflet/dist/leaflet.css"/>
+
+<link rel="stylesheet"
+href="https://unpkg.com/leaflet.markercluster/dist/MarkerCluster.css"/>
+
+<script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+
+<script src="https://unpkg.com/leaflet.markercluster/dist/leaflet.markercluster.js"></script>
+
+<link rel="stylesheet" href="style.css">
+
+<style>
+    #cidade-info {
+        font-size: 0.9em;
+        margin-top: 4px;
+        color: #ecf0f1;
+    }
+    #cidade-info small {
+        opacity: 0.8;
+    }
+</style>
+
+</head>
+
+<body>
+
+<div class="topbar">
+
+<div class="title">
+Cidade Alerta
+</div>
+
 <div class="user">
 <div style="text-align: right;">
     <span id="usuario"></span>
@@ -205,4 +336,4 @@ window.location="login"
 
 </body>
 
-</html> -->
+</html> --> -->
