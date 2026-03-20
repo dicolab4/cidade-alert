@@ -5,6 +5,8 @@
     <link rel="stylesheet" href="style.css">
     <style>
         .admin-container { padding: 20px; }
+        
+        /* Estatísticas */
         .stats-grid { 
             display: grid; 
             grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
@@ -20,6 +22,40 @@
         }
         .stat-card h3 { margin: 0 0 10px 0; color: #666; }
         .stat-card .number { font-size: 2em; font-weight: bold; color: #1976D2; }
+        
+        /* Abas */
+        .tabs {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+            border-bottom: 2px solid #ddd;
+        }
+        .tab-btn {
+            padding: 10px 20px;
+            background: none;
+            border: none;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: bold;
+            color: #666;
+            transition: all 0.3s;
+        }
+        .tab-btn:hover {
+            color: #1976D2;
+        }
+        .tab-btn.active {
+            color: #1976D2;
+            border-bottom: 2px solid #1976D2;
+            margin-bottom: -2px;
+        }
+        .tab-content {
+            display: none;
+        }
+        .tab-content.active {
+            display: block;
+        }
+        
+        /* Tabelas */
         table { 
             width: 100%; 
             border-collapse: collapse; 
@@ -33,6 +69,8 @@
         }
         th { background: #1976D2; color: white; }
         tr:hover { background: #f5f5f5; }
+        
+        /* Botões */
         .btn { 
             padding: 5px 10px; 
             border: none; 
@@ -47,7 +85,24 @@
             color: white; 
             padding: 10px 20px;
             margin-bottom: 20px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
         }
+        .btn-view { background: #2196F3; color: white; }
+        .btn-concluir { background: #4CAF50; color: white; }
+        
+        /* Status */
+        .status-aberto { color: #FF9800; font-weight: bold; }
+        .status-concluido { color: #4CAF50; font-weight: bold; }
+        .tipo-admin { color: #f44336; font-weight: bold; }
+        .tipo-moderador { color: #FF9800; }
+        .ativo { color: #4CAF50; }
+        .inativo { color: #f44336; }
+        .lida { color: #4CAF50; }
+        .nao-lida { color: #FF9800; font-weight: bold; }
+        
+        /* Modal */
         .modal {
             display: none;
             position: fixed;
@@ -56,6 +111,7 @@
             width: 100%;
             height: 100%;
             background: rgba(0,0,0,0.5);
+            z-index: 1000;
         }
         .modal-content {
             background: white;
@@ -64,23 +120,45 @@
             margin: 50px auto;
             padding: 20px;
             border-radius: 8px;
+            max-height: 80vh;
+            overflow-y: auto;
         }
-        .modal input, .modal select {
+        .modal input, .modal select, .modal textarea {
             width: 100%;
             padding: 8px;
             margin: 10px 0;
             border: 1px solid #ddd;
             border-radius: 4px;
         }
-        .tipo-admin { color: #f44336; font-weight: bold; }
-        .tipo-moderador { color: #FF9800; }
-        .ativo { color: #4CAF50; }
-        .inativo { color: #f44336; }
+        .modal textarea {
+            min-height: 100px;
+            resize: vertical;
+        }
+        
+        /* Badge */
+        .badge {
+            display: inline-block;
+            padding: 3px 8px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: bold;
+        }
+        .badge-success { background: #4CAF50; color: white; }
+        .badge-warning { background: #FF9800; color: white; }
+        .badge-danger { background: #f44336; color: white; }
+        
+        /* Responsivo */
+        @media (max-width: 768px) {
+            .stats-grid { grid-template-columns: 1fr; }
+            table { font-size: 12px; }
+            th, td { padding: 8px; }
+            .tab-btn { padding: 8px 12px; font-size: 14px; }
+        }
     </style>
 </head>
 <body>
     <div class="topbar">
-        <div class="title">Cidade Alerta - Admin</div>
+        <div class="title">🏛️ Cidade Alerta - Admin</div>
         <div class="user">
             <span id="usuario"></span>
             <button onclick="logout()">Sair</button>
@@ -93,49 +171,127 @@
         <!-- Estatísticas -->
         <div class="stats-grid" id="stats">
             <div class="stat-card">
-                <h3>Total Usuários</h3>
+                <h3>👥 Total Usuários</h3>
                 <div class="number" id="totalUsuarios">0</div>
             </div>
             <div class="stat-card">
-                <h3>Total Ocorrências</h3>
+                <h3>📋 Total Ocorrências</h3>
                 <div class="number" id="totalOcorrencias">0</div>
             </div>
             <div class="stat-card">
-                <h3>Admins</h3>
+                <h3>👑 Admins</h3>
                 <div class="number" id="totalAdmins">0</div>
             </div>
             <div class="stat-card">
-                <h3>Moderadores</h3>
-                <div class="number" id="totalModeradores">0</div>
+                <h3>📨 Mensagens</h3>
+                <div class="number" id="totalMensagens">0</div>
             </div>
         </div>
 
-        <!-- Botão adicionar -->
-        <button class="btn-add" onclick="abrirModal()">➕ Novo Usuário</button>
+        <!-- Abas -->
+        <div class="tabs">
+            <button class="tab-btn active" onclick="mudarAba('usuarios')">👥 Usuários</button>
+            <button class="tab-btn" onclick="mudarAba('mensagens')">📨 Mensagens</button>
+            <button class="tab-btn" onclick="mudarAba('ocorrencias')">📋 Ocorrências</button>
+        </div>
 
-        <!-- Tabela de usuários -->
-        <table>
-            <thead>
-                <tr>
-                    <th>ID</th>
-                    <th>Email</th>
-                    <th>Cidade</th>
-                    <th>Tipo</th>
-                    <th>Status</th>
-                    <th>Criado em</th>
-                    <th>Ações</th>
-                </tr>
-            </thead>
-            <tbody id="tabelaUsuarios">
-                <tr><td colspan="7">Carregando...</td></tr>
-            </tbody>
-        </table>
+        <!-- Conteúdo das abas -->
+        
+        <!-- Aba Usuários -->
+        <div id="tab-usuarios" class="tab-content active">
+            <button class="btn-add" onclick="abrirModalUsuario()">➕ Novo Usuário</button>
+            <div style="overflow-x: auto;">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Email</th>
+                            <th>Nome</th>
+                            <th>Cidade</th>
+                            <th>Tipo</th>
+                            <th>Status</th>
+                            <th>FCM Token</th>
+                            <th>Criado em</th>
+                            <th>Ações</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tabelaUsuarios">
+                        <tr><td colspan="9">Carregando...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Aba Mensagens -->
+        <div id="tab-mensagens" class="tab-content">
+            <div style="margin-bottom: 10px;">
+                <button class="btn-add" onclick="carregarMensagens()">🔄 Atualizar</button>
+                <select id="filtroMensagens" onchange="carregarMensagens()">
+                    <option value="">Todas</option>
+                    <option value="false">Não lidas</option>
+                    <option value="true">Lidas</option>
+                </select>
+            </div>
+            <div style="overflow-x: auto;">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Usuário</th>
+                            <th>Ocorrência</th>
+                            <th>Título</th>
+                            <th>Mensagem</th>
+                            <th>Status</th>
+                            <th>Data</th>
+                            <th>Ações</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tabelaMensagens">
+                        <tr><td colspan="8">Carregando...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Aba Ocorrências -->
+        <div id="tab-ocorrencias" class="tab-content">
+            <div style="margin-bottom: 10px;">
+                <button class="btn-add" onclick="carregarOcorrencias()">🔄 Atualizar</button>
+                <select id="filtroOcorrencias" onchange="carregarOcorrencias()">
+                    <option value="">Todas</option>
+                    <option value="aberto">Abertas</option>
+                    <option value="concluido">Concluídas</option>
+                </select>
+                <select id="filtroCidade" onchange="carregarOcorrencias()">
+                    <option value="">Todas as cidades</option>
+                </select>
+            </div>
+            <div style="overflow-x: auto;">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Usuário</th>
+                            <th>Cidade</th>
+                            <th>Categoria</th>
+                            <th>Descrição</th>
+                            <th>Status</th>
+                            <th>Data</th>
+                            <th>Ações</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tabelaOcorrencias">
+                        <tr><td colspan="8">Carregando...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
     </div>
 
-    <!-- Modal para criar/editar usuário -->
-    <div id="modal" class="modal">
+    <!-- Modal Usuário -->
+    <div id="modalUsuario" class="modal">
         <div class="modal-content">
-            <h2 id="modalTitulo">Novo Usuário</h2>
+            <h2 id="modalUsuarioTitulo">Novo Usuário</h2>
             <input type="hidden" id="usuarioId">
             
             <label>Email:</label>
@@ -143,6 +299,9 @@
             
             <label>Senha:</label>
             <input type="password" id="senha" placeholder="••••••••">
+            
+            <label>Nome:</label>
+            <input type="text" id="nome" placeholder="Nome completo">
             
             <label>Cidade:</label>
             <select id="cidade">
@@ -162,8 +321,21 @@
             
             <div style="display: flex; gap: 10px; margin-top: 20px;">
                 <button onclick="salvarUsuario()" style="flex:1; background:#4CAF50; color:white;">Salvar</button>
-                <button onclick="fecharModal()" style="flex:1; background:#f44336; color:white;">Cancelar</button>
+                <button onclick="fecharModalUsuario()" style="flex:1; background:#f44336; color:white;">Cancelar</button>
             </div>
+        </div>
+    </div>
+
+    <!-- Modal Mensagem -->
+    <div id="modalMensagem" class="modal">
+        <div class="modal-content">
+            <h2>Detalhes da Mensagem</h2>
+            <p><strong>Título:</strong> <span id="msgTitulo"></span></p>
+            <p><strong>Mensagem:</strong></p>
+            <p id="msgConteudo" style="background:#f5f5f5; padding:10px; border-radius:5px;"></p>
+            <p><strong>Data:</strong> <span id="msgData"></span></p>
+            <p><strong>Status:</strong> <span id="msgStatus"></span></p>
+            <button onclick="fecharModalMensagem()" style="background:#1976D2; color:white; padding:10px; width:100%; margin-top:10px;">Fechar</button>
         </div>
     </div>
 
@@ -171,11 +343,56 @@
         const token = localStorage.getItem("token")
         if (!token) window.location = "login"
 
-        // Carregar dados iniciais
-        carregarUsuarios()
-        carregarCidades()
-        carregarEstatisticas()
+        let cidadesList = []
 
+        // ===========================================
+        // FUNÇÕES DE ABA
+        // ===========================================
+        function mudarAba(aba) {
+            document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+            document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
+            
+            document.querySelector(`.tab-btn[onclick="mudarAba('${aba}')"]`).classList.add('active');
+            document.getElementById(`tab-${aba}`).classList.add('active');
+            
+            if (aba === 'usuarios') carregarUsuarios();
+            if (aba === 'mensagens') carregarMensagens();
+            if (aba === 'ocorrencias') carregarOcorrencias();
+        }
+
+        // ===========================================
+        // CARREGAR DADOS INICIAIS
+        // ===========================================
+        async function carregarCidades() {
+            const res = await fetch("/api/cidades")
+            const cidades = await res.json()
+            cidadesList = cidades
+            
+            let options = '<option value="">Selecione uma cidade</option>'
+            let filtroOptions = '<option value="">Todas as cidades</option>'
+            cidades.forEach(c => {
+                options += `<option value="${c.codigo_ibge}">${c.nome} - ${c.uf}</option>`
+                filtroOptions += `<option value="${c.codigo_ibge}">${c.nome} - ${c.uf}</option>`
+            })
+            document.getElementById("cidade").innerHTML = options
+            document.getElementById("filtroCidade").innerHTML = filtroOptions
+        }
+
+        async function carregarEstatisticas() {
+            const res = await fetch("/api/admin/estatisticas", {
+                headers: { "Authorization": `Bearer ${token}` }
+            })
+            const stats = await res.json()
+            
+            document.getElementById("totalUsuarios").textContent = stats.total_usuarios
+            document.getElementById("totalOcorrencias").textContent = stats.total_ocorrencias
+            document.getElementById("totalAdmins").textContent = stats.usuarios_por_tipo.admins
+            document.getElementById("totalMensagens").textContent = stats.total_mensagens || 0
+        }
+
+        // ===========================================
+        // USUÁRIOS
+        // ===========================================
         async function carregarUsuarios() {
             const res = await fetch("/api/admin/usuarios", {
                 headers: { "Authorization": `Bearer ${token}` }
@@ -187,7 +404,8 @@
                 html += `
                     <tr>
                         <td>${u.id}</td>
-                        <td>${u.email}</td>
+                        <td>${u.email || '-'}</td>
+                        <td>${u.nome || '-'}</td>
                         <td>${u.cidade_nome || '-'} ${u.uf || ''}</td>
                         <td class="${u.tipo === 1 ? 'tipo-admin' : u.tipo === 2 ? 'tipo-moderador' : ''}">
                             ${u.tipo === 1 ? 'Admin' : u.tipo === 2 ? 'Moderador' : 'Comum'}
@@ -195,6 +413,7 @@
                         <td class="${u.ativo ? 'ativo' : 'inativo'}">
                             ${u.ativo ? 'Ativo' : 'Inativo'}
                         </td>
+                        <td>${u.fcm_token ? '✅ Sim' : '❌ Não'}</td>
                         <td>${new Date(u.created_at).toLocaleDateString()}</td>
                         <td>
                             <button class="btn btn-edit" onclick="editarUsuario(${u.id})">✏️</button>
@@ -208,42 +427,20 @@
             document.getElementById("tabelaUsuarios").innerHTML = html
         }
 
-        async function carregarCidades() {
-            const res = await fetch("/api/cidades")
-            const cidades = await res.json()
-            
-            let options = '<option value="">Selecione uma cidade</option>'
-            cidades.forEach(c => {
-                options += `<option value="${c.codigo_ibge}">${c.nome} - ${c.uf}</option>`
-            })
-            document.getElementById("cidade").innerHTML = options
-        }
-
-        async function carregarEstatisticas() {
-            const res = await fetch("/api/admin/estatisticas", {
-                headers: { "Authorization": `Bearer ${token}` }
-            })
-            const stats = await res.json()
-            
-            document.getElementById("totalUsuarios").textContent = stats.total_usuarios
-            document.getElementById("totalOcorrencias").textContent = stats.total_ocorrencias
-            document.getElementById("totalAdmins").textContent = stats.usuarios_por_tipo.admins
-            document.getElementById("totalModeradores").textContent = stats.usuarios_por_tipo.moderadores
-        }
-
-        function abrirModal(usuario = null) {
-            document.getElementById("modalTitulo").textContent = usuario ? "Editar Usuário" : "Novo Usuário"
+        function abrirModalUsuario(usuario = null) {
+            document.getElementById("modalUsuarioTitulo").textContent = usuario ? "Editar Usuário" : "Novo Usuário"
             document.getElementById("usuarioId").value = usuario ? usuario.id : ""
             document.getElementById("email").value = usuario ? usuario.email : ""
             document.getElementById("senha").value = ""
+            document.getElementById("nome").value = usuario ? usuario.nome || "" : ""
             document.getElementById("cidade").value = usuario ? usuario.codigo_ibge : ""
             document.getElementById("tipo").value = usuario ? usuario.tipo : 3
             document.getElementById("ativo").checked = usuario ? usuario.ativo : true
-            document.getElementById("modal").style.display = "block"
+            document.getElementById("modalUsuario").style.display = "block"
         }
 
-        function fecharModal() {
-            document.getElementById("modal").style.display = "none"
+        function fecharModalUsuario() {
+            document.getElementById("modalUsuario").style.display = "none"
         }
 
         async function salvarUsuario() {
@@ -251,6 +448,7 @@
             const dados = {
                 email: document.getElementById("email").value,
                 senha: document.getElementById("senha").value,
+                nome: document.getElementById("nome").value,
                 cidade_ibge: document.getElementById("cidade").value || null,
                 tipo: parseInt(document.getElementById("tipo").value),
                 ativo: document.getElementById("ativo").checked
@@ -280,7 +478,7 @@
 
             if (res.ok) {
                 alert(id ? "Usuário atualizado!" : "Usuário criado!")
-                fecharModal()
+                fecharModalUsuario()
                 carregarUsuarios()
                 carregarEstatisticas()
             } else {
@@ -294,7 +492,7 @@
                 headers: { "Authorization": `Bearer ${token}` }
             })
             const usuario = await res.json()
-            abrirModal(usuario)
+            abrirModalUsuario(usuario)
         }
 
         async function toggleUsuario(id) {
@@ -312,54 +510,138 @@
             }
         }
 
+        // ===========================================
+        // MENSAGENS
+        // ===========================================
+        async function carregarMensagens() {
+            const filtro = document.getElementById("filtroMensagens").value
+            let url = "/api/admin/mensagens"
+            if (filtro !== "") url += `?lida=${filtro}`
+            
+            const res = await fetch(url, {
+                headers: { "Authorization": `Bearer ${token}` }
+            })
+            const mensagens = await res.json()
+            
+            let html = ""
+            mensagens.forEach(m => {
+                html += `
+                    <tr>
+                        <td>${m.id}</td>
+                        <td>${m.usuario_email || 'Anônimo'}</td>
+                        <td>#${m.ocorrencia_id || '-'}</td>
+                        <td>${m.titulo}</td>
+                        <td>${m.mensagem.substring(0, 50)}${m.mensagem.length > 50 ? '...' : ''}</td>
+                        <td class="${m.lida ? 'lida' : 'nao-lida'}">
+                            ${m.lida ? '✓ Lida' : '⏳ Não lida'}
+                        </td>
+                        <td>${new Date(m.created_at).toLocaleString()}</td>
+                        <td>
+                            <button class="btn btn-view" onclick="verMensagem(${m.id})">👁️ Ver</button>
+                        </td>
+                    </tr>
+                `
+            })
+            document.getElementById("tabelaMensagens").innerHTML = html || '<tr><td colspan="8">Nenhuma mensagem encontrada</td></tr>'
+        }
+
+        async function verMensagem(id) {
+            const res = await fetch(`/api/admin/mensagens/${id}`, {
+                headers: { "Authorization": `Bearer ${token}` }
+            })
+            const msg = await res.json()
+            
+            document.getElementById("msgTitulo").innerText = msg.titulo
+            document.getElementById("msgConteudo").innerText = msg.mensagem
+            document.getElementById("msgData").innerText = new Date(msg.created_at).toLocaleString()
+            document.getElementById("msgStatus").innerHTML = msg.lida ? '<span class="badge badge-success">Lida</span>' : '<span class="badge badge-warning">Não lida</span>'
+            
+            document.getElementById("modalMensagem").style.display = "block"
+        }
+
+        function fecharModalMensagem() {
+            document.getElementById("modalMensagem").style.display = "none"
+        }
+
+        // ===========================================
+        // OCORRÊNCIAS
+        // ===========================================
+        async function carregarOcorrencias() {
+            const status = document.getElementById("filtroOcorrencias").value
+            const cidade = document.getElementById("filtroCidade").value
+            let url = "/api/admin/ocorrencias"
+            let params = []
+            if (status) params.push(`status=${status}`)
+            if (cidade) params.push(`cidade=${cidade}`)
+            if (params.length) url += `?${params.join('&')}`
+            
+            const res = await fetch(url, {
+                headers: { "Authorization": `Bearer ${token}` }
+            })
+            const ocorrencias = await res.json()
+            
+            let html = ""
+            ocorrencias.forEach(o => {
+                html += `
+                    <tr>
+                        <td>${o.id}</td>
+                        <td>${o.usuario_email || 'Anônimo'}</td>
+                        <td>${o.cidade_nome || '-'} ${o.uf || ''}</td>
+                        <td><span class="badge badge-warning">${o.categoria}</span></td>
+                        <td>${o.descricao.substring(0, 50)}${o.descricao.length > 50 ? '...' : ''}</td>
+                        <td class="${o.status === 'aberto' ? 'status-aberto' : 'status-concluido'}">
+                            ${o.status === 'aberto' ? '🟡 Aberto' : '✅ Concluído'}
+                        </td>
+                        <td>${new Date(o.data_criacao).toLocaleString()}</td>
+                        <td>
+                            <button class="btn btn-view" onclick="verOcorrencia(${o.id})">👁️ Ver</button>
+                            ${o.status === 'aberto' ? `<button class="btn btn-concluir" onclick="concluirOcorrencia(${o.id})">✅ Concluir</button>` : ''}
+                        </td>
+                    </tr>
+                `
+            })
+            document.getElementById("tabelaOcorrencias").innerHTML = html || '<tr><td colspan="8">Nenhuma ocorrência encontrada</td></tr>'
+        }
+
+        async function concluirOcorrencia(id) {
+            if (!confirm("Concluir esta ocorrência? O usuário será notificado.")) return
+            
+            const res = await fetch(`/api/admin/ocorrencias/${id}/concluir`, {
+                method: "PUT",
+                headers: { "Authorization": `Bearer ${token}` }
+            })
+            
+            if (res.ok) {
+                alert("✅ Ocorrência concluída! Usuário notificado.")
+                carregarOcorrencias()
+                carregarEstatisticas()
+            } else {
+                const erro = await res.json()
+                alert("Erro: " + (erro.error || "Erro ao concluir"))
+            }
+        }
+
+        async function verOcorrencia(id) {
+            const res = await fetch(`/api/admin/ocorrencias/${id}`, {
+                headers: { "Authorization": `Bearer ${token}` }
+            })
+            const o = await res.json()
+            alert(`Ocorrência #${o.id}\n\nCategoria: ${o.categoria}\nDescrição: ${o.descricao}\nStatus: ${o.status}\nData: ${new Date(o.data_criacao).toLocaleString()}\nFoto: ${o.foto_url}`)
+        }
+
+        // ===========================================
+        // LOGOUT
+        // ===========================================
         function logout() {
             localStorage.removeItem("token")
             localStorage.removeItem("usuario")
             window.location = "login"
         }
+
+        // Inicialização
+        carregarCidades()
+        carregarUsuarios()
+        carregarEstatisticas()
     </script>
 </body>
 </html>
-
-<!-- <!DOCTYPE html>
-<html>
-<head>
-<link rel="stylesheet" href="style.css">
-</head>
-
-<body>
-
-<h2>Login Admin</h2>
-
-<input id="email" placeholder="email">
-<input id="senha" type="password" placeholder="senha">
-
-<button onclick="login()">Entrar</button>
-
-<script>
-
-async function login(){
-
-const email = document.getElementById("email").value
-const senha = document.getElementById("senha").value
-
-const res = await fetch("http://localhost:3000/api/auth/login",{
-
-method:"POST",
-headers:{"Content-Type":"application/json"},
-body:JSON.stringify({email,senha})
-
-})
-
-const data = await res.json()
-
-localStorage.setItem("token",data.token)
-
-window.location="dashboard.html"
-
-}
-
-</script>
-
-</body>
-</html> -->
