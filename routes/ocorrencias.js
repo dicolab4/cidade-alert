@@ -5,6 +5,8 @@ const multer = require("multer")
 const cloudinary = require("../config/cloudinary")
 const {CloudinaryStorage} = require("multer-storage-cloudinary")
 const Sightengine = require('sightengine');
+const fs = require('fs');
+const path = require('path');
 
 // ===========================================
 // IMPORTAR FILTRO DE PALAVRAS
@@ -24,26 +26,22 @@ const client = new Sightengine(
 console.log("✅ Filtro de palavras carregado com sucesso!");
 
 // ===========================================
-// CONFIGURAÇÃO DO UPLOAD (PRIMEIRO EM MEMÓRIA)
+// CONFIGURAÇÃO DO UPLOAD (APENAS MEMÓRIA)
 // ===========================================
-// Usar memoryStorage primeiro para verificar a imagem
-const uploadMemory = multer({
+const upload = multer({
     storage: multer.memoryStorage(),
-    limits: { fileSize: 10 * 1024 * 1024 } // 10MB
-});
-
-// ===========================================
-// CONFIGURAÇÃO DO CLOUDINARY UPLOAD (APÓS VERIFICAÇÃO)
-// ===========================================
-const cloudinaryStorage = new CloudinaryStorage({
-    cloudinary: cloudinary,
-    params: {
-        folder: "cidade-alerta",
-        allowed_formats: ["jpg", "jpeg", "png"]
+    limits: { 
+        fileSize: 10 * 1024 * 1024 // 10MB
+    },
+    fileFilter: (req, file, cb) => {
+        // Aceitar apenas imagens
+        if (file.mimetype.startsWith('image/')) {
+            cb(null, true);
+        } else {
+            cb(new Error('Apenas imagens são permitidas'), false);
+        }
     }
 });
-
-const uploadCloudinary = multer({ storage: cloudinaryStorage });
 
 // ===========================================
 // FUNÇÕES DE MODERAÇÃO
@@ -53,6 +51,11 @@ const uploadCloudinary = multer({ storage: cloudinaryStorage });
  * Verifica imagem usando Sightengine
  */
 async function checkImage(imageBuffer) {
+    console.log("🔍 checkImage - Iniciando verificação");
+    console.log("🔍 imageBuffer existe?", !!imageBuffer);
+    console.log("🔍 imageBuffer tipo:", typeof imageBuffer);
+    console.log("🔍 imageBuffer length:", imageBuffer?.length);
+    
     if (!imageBuffer) {
         console.log("⚠️ Nenhum buffer de imagem recebido");
         return { safe: false, error: "Imagem não encontrada" };
@@ -61,11 +64,13 @@ async function checkImage(imageBuffer) {
     try {
         // Converter buffer para base64
         const base64Image = imageBuffer.toString('base64');
+        console.log("🔍 Base64 gerado, tamanho:", base64Image.length);
         
+        console.log("🔍 Chamando Sightengine...");
         const result = await client.check('nudity', 'wad', 'gore')
             .setBytes(base64Image);
         
-        console.log("Resultado Sightengine:", JSON.stringify(result, null, 2));
+        console.log("✅ Sightengine respondeu:", JSON.stringify(result, null, 2));
         
         const isNude = result.nudity && result.nudity.raw > 0.7;
         const isViolent = result.weapon > 0.5 || result.alcohol > 0.5;
@@ -80,7 +85,8 @@ async function checkImage(imageBuffer) {
             }
         };
     } catch (error) {
-        console.error("Erro na moderação de imagem:", error);
+        console.error("❌ Erro na moderação de imagem:", error.message);
+        console.error("Stack:", error.stack);
         // Em caso de erro, permitir (ou bloquear dependendo da política)
         return { safe: true, details: {}, error: error.message };
     }
@@ -124,17 +130,30 @@ async function getUsuarioId(usuario_id, usuario_uuid) {
 }
 
 /**
- * Função para fazer upload para o Cloudinary
+ * Função para fazer upload para o Cloudinary a partir do buffer
  */
-async function uploadToCloudinary(fileBuffer, mimetype) {
+async function uploadToCloudinary(imageBuffer, mimetype) {
+    console.log("📤 Iniciando upload para Cloudinary...");
+    console.log("📤 Tamanho do buffer:", imageBuffer.length);
+    
     return new Promise((resolve, reject) => {
-        cloudinary.uploader.upload_stream(
-            { folder: "cidade-alerta" },
+        const uploadStream = cloudinary.uploader.upload_stream(
+            { 
+                folder: "cidade-alerta",
+                resource_type: "image"
+            },
             (error, result) => {
-                if (error) reject(error);
-                else resolve(result);
+                if (error) {
+                    console.error("❌ Erro no upload Cloudinary:", error);
+                    reject(error);
+                } else {
+                    console.log("✅ Upload Cloudinary concluído:", result.secure_url);
+                    resolve(result);
+                }
             }
-        ).end(fileBuffer);
+        );
+        
+        uploadStream.end(imageBuffer);
     });
 }
 
@@ -173,7 +192,12 @@ router.get("/", async (req,res)=>{
 })
 
 // POST / - Criar ocorrência (COM MODERAÇÃO)
-router.post("/", uploadMemory.single("foto"), async (req,res)=>{
+router.post("/", upload.single("foto"), async (req,res)=>{
+    console.log("📥 Recebendo requisição POST /ocorrencias");
+    console.log("📥 req.file:", req.file ? "EXISTE" : "NÃO EXISTE");
+    console.log("📥 req.file fields:", req.file ? Object.keys(req.file) : "nenhum");
+    console.log("📥 req.body:", req.body);
+    
     try {
         const {descricao, categoria, latitude, longitude, cidade_ibge, usuario_id, usuario_uuid} = req.body
         
@@ -192,10 +216,20 @@ router.post("/", uploadMemory.single("foto"), async (req,res)=>{
             return res.status(400).json({ error: "Descrição muito curta" })
         }
 
+        // Verificar se o buffer existe
+        if (!req.file.buffer) {
+            console.error("❌ req.file.buffer não existe!");
+            console.log("📥 req.file:", JSON.stringify(req.file, null, 2));
+            return res.status(400).json({ error: "Erro ao processar imagem" });
+        }
+
+        console.log("✅ Buffer da imagem OK, tamanho:", req.file.buffer.length);
+
         // ===========================================
         // OBTER ID DO USUÁRIO
         // ===========================================
         const usuarioIdFinal = await getUsuarioId(usuario_id, usuario_uuid);
+        console.log("👤 Usuário ID:", usuarioIdFinal);
 
         // ===========================================
         // MODERAÇÃO DE TEXTO
@@ -259,8 +293,9 @@ router.post("/", uploadMemory.single("foto"), async (req,res)=>{
         })
         
     } catch (error) {
-        console.error("❌ Erro ao criar ocorrência:", error)
-        res.status(500).json({ error: "Erro ao criar ocorrência" })
+        console.error("❌ Erro ao criar ocorrência:", error);
+        console.error("Stack:", error.stack);
+        res.status(500).json({ error: "Erro ao criar ocorrência: " + error.message })
     }
 })
 
