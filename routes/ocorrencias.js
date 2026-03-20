@@ -47,23 +47,54 @@ const upload = multer({
 /**
  * Verifica imagem usando Sightengine
  */
-async function checkImage(imageBuffer) {
-    console.log("🔍 checkImage - Iniciando verificação");
-    console.log("🔍 imageBuffer existe?", !!imageBuffer);
-    console.log("🔍 imageBuffer é Buffer?", imageBuffer instanceof Buffer);
+// async function checkImage(imageBuffer) {
+//     console.log("🔍 checkImage - Iniciando verificação");
+//     console.log("🔍 imageBuffer existe?", !!imageBuffer);
+//     console.log("🔍 imageBuffer é Buffer?", imageBuffer instanceof Buffer);
     
+//     if (!imageBuffer) {
+//         console.log("⚠️ Nenhum buffer de imagem recebido");
+//         return { safe: false, error: "Imagem não encontrada" };
+//     }
+    
+//     try {
+//         // Converter buffer para base64
+//         const base64Image = imageBuffer.toString('base64');
+//         console.log("🔍 Base64 gerado, tamanho:", base64Image.length);
+        
+//         const result = await client.check('nudity', 'wad', 'gore')
+//             .setBytes(base64Image);
+        
+//         console.log("✅ Sightengine respondeu");
+        
+//         const isNude = result.nudity && result.nudity.raw > 0.7;
+//         const isViolent = result.weapon > 0.5 || result.alcohol > 0.5;
+//         const isGore = result.gore && result.gore.prob > 0.5;
+        
+//         return {
+//             safe: !(isNude || isViolent || isGore),
+//             details: {
+//                 nudity: result.nudity?.raw || 0,
+//                 weapons: result.weapon || 0,
+//                 alcohol: result.alcohol || 0
+//             }
+//         };
+//     } catch (error) {
+//         console.error("❌ Erro na moderação de imagem:", error.message);
+//         return { safe: true, details: {}, error: error.message };
+//     }
+// }
+
+async function checkImage(imageBuffer) {
     if (!imageBuffer) {
-        console.log("⚠️ Nenhum buffer de imagem recebido");
         return { safe: false, error: "Imagem não encontrada" };
     }
     
     try {
-        // Converter buffer para base64
         const base64Image = imageBuffer.toString('base64');
-        console.log("🔍 Base64 gerado, tamanho:", base64Image.length);
         
-        const result = await client.check('nudity', 'wad', 'gore')
-            .setBytes(base64Image);
+        // Formato correto para Sightengine
+        const result = await client.check(['nudity', 'wad', 'gore'], base64Image);
         
         console.log("✅ Sightengine respondeu");
         
