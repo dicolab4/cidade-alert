@@ -29,6 +29,7 @@
             gap: 10px;
             margin-bottom: 20px;
             border-bottom: 2px solid #ddd;
+            flex-wrap: wrap;
         }
         .tab-btn {
             padding: 10px 20px;
@@ -61,14 +62,92 @@
             border-collapse: collapse; 
             background: white;
             box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            overflow-x: auto;
+            display: block;
         }
         th, td { 
             padding: 12px; 
             text-align: left; 
             border-bottom: 1px solid #ddd;
         }
-        th { background: #1976D2; color: white; }
+        th { background: #1976D2; color: white; position: sticky; top: 0; }
         tr:hover { background: #f5f5f5; }
+        
+        /* SQL Query */
+        .sql-container {
+            background: #1e1e1e;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+        .sql-editor {
+            width: 100%;
+            min-height: 200px;
+            background: #2d2d2d;
+            color: #d4d4d4;
+            border: none;
+            border-radius: 4px;
+            padding: 15px;
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+            resize: vertical;
+        }
+        .sql-editor:focus {
+            outline: none;
+            border: 1px solid #1976D2;
+        }
+        .sql-buttons {
+            margin-top: 10px;
+            display: flex;
+            gap: 10px;
+        }
+        .sql-btn {
+            padding: 8px 16px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: bold;
+        }
+        .sql-btn-run {
+            background: #4CAF50;
+            color: white;
+        }
+        .sql-btn-run:hover {
+            background: #45a049;
+        }
+        .sql-btn-clear {
+            background: #f44336;
+            color: white;
+        }
+        .sql-btn-clear:hover {
+            background: #da190b;
+        }
+        .sql-btn-example {
+            background: #FF9800;
+            color: white;
+        }
+        .sql-result {
+            margin-top: 20px;
+            background: white;
+            border-radius: 8px;
+            overflow-x: auto;
+            max-height: 500px;
+            overflow-y: auto;
+        }
+        .sql-error {
+            background: #ffebee;
+            color: #c62828;
+            padding: 15px;
+            border-radius: 8px;
+            border-left: 4px solid #c62828;
+        }
+        .sql-success {
+            background: #e8f5e9;
+            color: #2e7d32;
+            padding: 10px;
+            border-radius: 8px;
+            margin-bottom: 10px;
+        }
         
         /* Botões */
         .btn { 
@@ -130,10 +209,6 @@
             border: 1px solid #ddd;
             border-radius: 4px;
         }
-        .modal textarea {
-            min-height: 100px;
-            resize: vertical;
-        }
         
         /* Badge */
         .badge {
@@ -147,12 +222,18 @@
         .badge-warning { background: #FF9800; color: white; }
         .badge-danger { background: #f44336; color: white; }
         
+        /* Scroll para tabelas */
+        .table-wrapper {
+            overflow-x: auto;
+            max-width: 100%;
+        }
+        
         /* Responsivo */
         @media (max-width: 768px) {
             .stats-grid { grid-template-columns: 1fr; }
-            table { font-size: 12px; }
-            th, td { padding: 8px; }
+            th, td { padding: 8px; font-size: 12px; }
             .tab-btn { padding: 8px 12px; font-size: 14px; }
+            .sql-editor { font-size: 12px; }
         }
     </style>
 </head>
@@ -193,20 +274,20 @@
             <button class="tab-btn active" onclick="mudarAba('usuarios')">👥 Usuários</button>
             <button class="tab-btn" onclick="mudarAba('mensagens')">📨 Mensagens</button>
             <button class="tab-btn" onclick="mudarAba('ocorrencias')">📋 Ocorrências</button>
+            <button class="tab-btn" onclick="mudarAba('sql')">🔧 SQL Query</button>
         </div>
 
-        <!-- Conteúdo das abas -->
-        
         <!-- Aba Usuários -->
         <div id="tab-usuarios" class="tab-content active">
             <button class="btn-add" onclick="abrirModalUsuario()">➕ Novo Usuário</button>
-            <div style="overflow-x: auto;">
+            <div class="table-wrapper">
                 <table>
                     <thead>
                         <tr>
                             <th>ID</th>
                             <th>Email</th>
                             <th>Nome</th>
+                            <th>UUID</th>
                             <th>Cidade</th>
                             <th>Tipo</th>
                             <th>Status</th>
@@ -216,7 +297,7 @@
                         </tr>
                     </thead>
                     <tbody id="tabelaUsuarios">
-                        <tr><td colspan="9">Carregando...</td></tr>
+                        <tr><td colspan="10">Carregando...</td></tr>
                     </tbody>
                 </table>
             </div>
@@ -232,7 +313,7 @@
                     <option value="true">Lidas</option>
                 </select>
             </div>
-            <div style="overflow-x: auto;">
+            <div class="table-wrapper">
                 <table>
                     <thead>
                         <tr>
@@ -266,7 +347,7 @@
                     <option value="">Todas as cidades</option>
                 </select>
             </div>
-            <div style="overflow-x: auto;">
+            <div class="table-wrapper">
                 <table>
                     <thead>
                         <tr>
@@ -277,13 +358,38 @@
                             <th>Descrição</th>
                             <th>Status</th>
                             <th>Data</th>
+                            <th>Foto</th>
                             <th>Ações</th>
                         </tr>
                     </thead>
                     <tbody id="tabelaOcorrencias">
-                        <tr><td colspan="8">Carregando...</td></tr>
+                        <tr><td colspan="9">Carregando...</td></tr>
                     </tbody>
                 </table>
+            </div>
+        </div>
+
+        <!-- Aba SQL Query -->
+        <div id="tab-sql" class="tab-content">
+            <div class="sql-container">
+                <textarea id="sqlQuery" class="sql-editor" placeholder="SELECT * FROM usuarios LIMIT 10;"></textarea>
+                <div class="sql-buttons">
+                    <button class="sql-btn sql-btn-run" onclick="executarSQL()">▶ Executar</button>
+                    <button class="sql-btn sql-btn-clear" onclick="limparSQL()">🗑 Limpar</button>
+                    <button class="sql-btn sql-btn-example" onclick="carregarExemplo()">📋 Exemplo</button>
+                </div>
+                <div id="sqlResult"></div>
+            </div>
+            
+            <div style="margin-top: 20px;">
+                <h3>📊 Tabelas disponíveis:</h3>
+                <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+                    <button class="btn-add" style="background:#2196F3;" onclick="carregarExemploTabela('usuarios')">👥 usuarios</button>
+                    <button class="btn-add" style="background:#2196F3;" onclick="carregarExemploTabela('ocorrencias')">📋 ocorrencias</button>
+                    <button class="btn-add" style="background:#2196F3;" onclick="carregarExemploTabela('mensagens')">📨 mensagens</button>
+                    <button class="btn-add" style="background:#2196F3;" onclick="carregarExemploTabela('cidades')">🏙️ cidades</button>
+                    <button class="btn-add" style="background:#2196F3;" onclick="carregarExemploTabela('estados')">🗺️ estados</button>
+                </div>
             </div>
         </div>
     </div>
@@ -352,7 +458,13 @@
             document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
             document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
             
-            document.querySelector(`.tab-btn[onclick="mudarAba('${aba}')"]`).classList.add('active');
+            const btn = Array.from(document.querySelectorAll('.tab-btn')).find(b => b.textContent.includes(
+                aba === 'usuarios' ? 'Usuários' : 
+                aba === 'mensagens' ? 'Mensagens' : 
+                aba === 'ocorrencias' ? 'Ocorrências' : 'SQL Query'
+            ));
+            if (btn) btn.classList.add('active');
+            
             document.getElementById(`tab-${aba}`).classList.add('active');
             
             if (aba === 'usuarios') carregarUsuarios();
@@ -406,6 +518,7 @@
                         <td>${u.id}</td>
                         <td>${u.email || '-'}</td>
                         <td>${u.nome || '-'}</td>
+                        <td style="font-size: 11px; max-width: 150px; overflow: hidden; text-overflow: ellipsis;">${u.uuid || '-'}</td>
                         <td>${u.cidade_nome || '-'} ${u.uf || ''}</td>
                         <td class="${u.tipo === 1 ? 'tipo-admin' : u.tipo === 2 ? 'tipo-moderador' : ''}">
                             ${u.tipo === 1 ? 'Admin' : u.tipo === 2 ? 'Moderador' : 'Comum'}
@@ -531,7 +644,7 @@
                         <td>${m.usuario_email || 'Anônimo'}</td>
                         <td>#${m.ocorrencia_id || '-'}</td>
                         <td>${m.titulo}</td>
-                        <td>${m.mensagem.substring(0, 50)}${m.mensagem.length > 50 ? '...' : ''}</td>
+                        <td style="max-width: 300px;">${m.mensagem.substring(0, 50)}${m.mensagem.length > 50 ? '...' : ''}</td>
                         <td class="${m.lida ? 'lida' : 'nao-lida'}">
                             ${m.lida ? '✓ Lida' : '⏳ Não lida'}
                         </td>
@@ -588,11 +701,12 @@
                         <td>${o.usuario_email || 'Anônimo'}</td>
                         <td>${o.cidade_nome || '-'} ${o.uf || ''}</td>
                         <td><span class="badge badge-warning">${o.categoria}</span></td>
-                        <td>${o.descricao.substring(0, 50)}${o.descricao.length > 50 ? '...' : ''}</td>
+                        <td style="max-width: 300px;">${o.descricao.substring(0, 50)}${o.descricao.length > 50 ? '...' : ''}</td>
                         <td class="${o.status === 'aberto' ? 'status-aberto' : 'status-concluido'}">
                             ${o.status === 'aberto' ? '🟡 Aberto' : '✅ Concluído'}
                         </td>
                         <td>${new Date(o.data_criacao).toLocaleString()}</td>
+                        <td><a href="${o.foto_url}" target="_blank">📷 Ver</a></td>
                         <td>
                             <button class="btn btn-view" onclick="verOcorrencia(${o.id})">👁️ Ver</button>
                             ${o.status === 'aberto' ? `<button class="btn btn-concluir" onclick="concluirOcorrencia(${o.id})">✅ Concluir</button>` : ''}
@@ -600,7 +714,7 @@
                     </tr>
                 `
             })
-            document.getElementById("tabelaOcorrencias").innerHTML = html || '<tr><td colspan="8">Nenhuma ocorrência encontrada</td></tr>'
+            document.getElementById("tabelaOcorrencias").innerHTML = html || '<tr><td colspan="9">Nenhuma ocorrência encontrada</td></tr>'
         }
 
         async function concluirOcorrencia(id) {
@@ -615,6 +729,7 @@
                 alert("✅ Ocorrência concluída! Usuário notificado.")
                 carregarOcorrencias()
                 carregarEstatisticas()
+                carregarMensagens()
             } else {
                 const erro = await res.json()
                 alert("Erro: " + (erro.error || "Erro ao concluir"))
@@ -627,6 +742,87 @@
             })
             const o = await res.json()
             alert(`Ocorrência #${o.id}\n\nCategoria: ${o.categoria}\nDescrição: ${o.descricao}\nStatus: ${o.status}\nData: ${new Date(o.data_criacao).toLocaleString()}\nFoto: ${o.foto_url}`)
+        }
+
+        // ===========================================
+        // SQL QUERY
+        // ===========================================
+        async function executarSQL() {
+            const query = document.getElementById("sqlQuery").value.trim()
+            
+            if (!query) {
+                alert("Digite uma consulta SQL")
+                return
+            }
+            
+            // Apenas consultas SELECT são permitidas por segurança
+            if (!query.toUpperCase().startsWith('SELECT')) {
+                alert("⚠️ Apenas consultas SELECT são permitidas por segurança")
+                return
+            }
+            
+            const resultDiv = document.getElementById("sqlResult")
+            resultDiv.innerHTML = '<div style="text-align: center; padding: 20px;">⏳ Executando consulta...</div>'
+            
+            try {
+                const res = await fetch("/api/admin/sql", {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                        "Authorization": `Bearer ${token}`
+                    },
+                    body: JSON.stringify({ query })
+                })
+                
+                const data = await res.json()
+                
+                if (res.ok) {
+                    if (data.rows && data.rows.length > 0) {
+                        // Gerar tabela de resultados
+                        const columns = Object.keys(data.rows[0])
+                        let html = `
+                            <div class="sql-success">✅ ${data.rowCount} linha(s) retornada(s) em ${data.executionTime}ms</div>
+                            <div class="table-wrapper">
+                                <table style="font-size: 12px;">
+                                    <thead>
+                                        <tr>
+                                            ${columns.map(col => `<th>${col}</th>`).join('')}
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        ${data.rows.map(row => `
+                                            <tr>
+                                                ${columns.map(col => `<td style="max-width: 200px; overflow: hidden; text-overflow: ellipsis;">${row[col] !== null ? String(row[col]).substring(0, 100) : 'NULL'}</td>`).join('')}
+                                            </tr>
+                                        `).join('')}
+                                    </tbody>
+                                </table>
+                            </div>
+                        `
+                        resultDiv.innerHTML = html
+                    } else {
+                        resultDiv.innerHTML = `<div class="sql-success">✅ Consulta executada com sucesso. Nenhuma linha retornada.</div>`
+                    }
+                } else {
+                    resultDiv.innerHTML = `<div class="sql-error">❌ Erro: ${data.error || 'Erro desconhecido'}</div>`
+                }
+            } catch (error) {
+                resultDiv.innerHTML = `<div class="sql-error">❌ Erro de conexão: ${error.message}</div>`
+            }
+        }
+        
+        function limparSQL() {
+            document.getElementById("sqlQuery").value = ""
+            document.getElementById("sqlResult").innerHTML = ""
+        }
+        
+        function carregarExemplo() {
+            document.getElementById("sqlQuery").value = `-- Exemplos de consultas:\n-- Ver últimos usuários\nSELECT id, email, nome, created_at FROM usuarios ORDER BY id DESC LIMIT 10;\n\n-- Ver ocorrências recentes\nSELECT id, categoria, status, data_criacao FROM ocorrencias ORDER BY id DESC LIMIT 10;\n\n-- Ver mensagens não lidas\nSELECT id, titulo, created_at FROM mensagens WHERE lida = false ORDER BY id DESC LIMIT 10;`
+        }
+        
+        function carregarExemploTabela(tabela) {
+            document.getElementById("sqlQuery").value = `SELECT * FROM ${tabela} ORDER BY id DESC LIMIT 20;`
+            executarSQL()
         }
 
         // ===========================================
