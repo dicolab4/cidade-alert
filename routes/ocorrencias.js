@@ -1,5 +1,3 @@
-// routes/ocorrencias.js
-// ROTAS DE OCORRÊNCIAS COM MODERAÇÃO DE CONTEÚDO 
 const express = require("express")
 const router = express.Router()
 const pool = require("../db")
@@ -26,26 +24,30 @@ const client = new Sightengine(
 console.log("✅ Filtro de palavras carregado com sucesso!");
 
 // ===========================================
-// CONFIGURAÇÃO DO UPLOAD
+// CONFIGURAÇÃO DO UPLOAD (MEMORY STORAGE PARA MODERAÇÃO)
 // ===========================================
-const storage = new CloudinaryStorage({
-    cloudinary: cloudinary,
-    params: {
-        folder: "cidade-alerta",
-        allowed_formats: ["jpg", "jpeg", "png"]
-    }
-})
-
 const upload = multer({ 
-    storage,
-    limits: { fileSize: 10 * 1024 * 1024 } // 10MB
-})
+    storage: multer.memoryStorage(),  // IMPORTANTE: usar memoryStorage
+    limits: { 
+        fileSize: 10 * 1024 * 1024 // 10MB
+    },
+    fileFilter: (req, file, cb) => {
+        // Aceitar apenas imagens
+        if (file.mimetype.startsWith('image/')) {
+            cb(null, true);
+        } else {
+            cb(new Error('Apenas imagens são permitidas'), false);
+        }
+    }
+});
 
 // ===========================================
 // FUNÇÕES DE MODERAÇÃO
 // ===========================================
+
 async function checkImage(imageBuffer) {
     if (!imageBuffer) {
+        console.log("⚠️ Nenhum buffer de imagem recebido");
         return { safe: false, error: "Imagem não encontrada" };
     }
     
@@ -57,9 +59,20 @@ async function checkImage(imageBuffer) {
         
         console.log("✅ Sightengine respondeu");
         
-        const isNude = result.nudity && result.nudity.raw > 0.7;
-        const isViolent = result.weapon > 0.5 || result.alcohol > 0.5;
-        const isGore = result.gore && result.gore.prob > 0.5;
+        // === AJUSTE: LIMITES MAIS PERMISSIVOS ===
+        // Valores: 0-1, quanto maior mais provável ser conteúdo impróprio
+        // Aumentamos os limites para evitar falsos positivos
+        const isNude = result.nudity && result.nudity.raw > 0.85;    // 0.7 → 0.85
+        const isViolent = result.weapon > 0.7 || result.alcohol > 0.7; // 0.5 → 0.7
+        const isGore = result.gore && result.gore.prob > 0.7;           // 0.5 → 0.7
+        
+        console.log("📊 Resultado da análise:", {
+            nudity: result.nudity?.raw?.toFixed(3) || 0,
+            weapons: result.weapon?.toFixed(3) || 0,
+            alcohol: result.alcohol?.toFixed(3) || 0,
+            gore: result.gore?.prob?.toFixed(3) || 0,
+            isNude, isViolent, isGore
+        });
         
         return {
             safe: !(isNude || isViolent || isGore),
@@ -71,6 +84,7 @@ async function checkImage(imageBuffer) {
         };
     } catch (error) {
         console.error("❌ Erro na moderação de imagem:", error.message);
+        // Em caso de erro, permitir a imagem (fail open)
         return { safe: true, details: {}, error: error.message };
     }
 }
@@ -101,15 +115,44 @@ function checkText(text) {
  */
 async function getUsuarioId(usuario_id, usuario_uuid) {
     if (usuario_id) {
-        return usuario_id;
+        return parseInt(usuario_id);
     } else if (usuario_uuid) {
         const user = await pool.query(
             "SELECT id FROM usuarios WHERE uuid = $1",
             [usuario_uuid]
         );
+        console.log("🔍 Buscando usuário por UUID:", usuario_uuid, "Resultado:", user.rows.length);
         return user.rows.length > 0 ? user.rows[0].id : null;
     }
     return null;
+}
+
+/**
+ * Função para fazer upload para o Cloudinary a partir do buffer
+ */
+async function uploadToCloudinary(imageBuffer, mimetype) {
+    console.log("📤 Iniciando upload para Cloudinary...");
+    console.log("📤 Tamanho do buffer:", imageBuffer.length);
+    
+    return new Promise((resolve, reject) => {
+        const uploadStream = cloudinary.uploader.upload_stream(
+            { 
+                folder: "cidade-alerta",
+                resource_type: "auto"
+            },
+            (error, result) => {
+                if (error) {
+                    console.error("❌ Erro no upload Cloudinary:", error);
+                    reject(error);
+                } else {
+                    console.log("✅ Upload Cloudinary concluído:", result.secure_url);
+                    resolve(result);
+                }
+            }
+        );
+        
+        uploadStream.end(imageBuffer);
+    });
 }
 
 // ===========================================
@@ -148,6 +191,8 @@ router.get("/", async (req,res)=>{
 
 // POST / - Criar ocorrência (COM MODERAÇÃO)
 router.post("/", upload.single("foto"), async (req,res)=>{
+    console.log("📥 Recebendo requisição POST /ocorrencias");
+    
     try {
         const {descricao, categoria, latitude, longitude, cidade_ibge, usuario_id, usuario_uuid} = req.body
         
@@ -166,10 +211,26 @@ router.post("/", upload.single("foto"), async (req,res)=>{
             return res.status(400).json({ error: "Descrição muito curta" })
         }
 
+        // Log do arquivo recebido
+        console.log("📄 req.file:", {
+            fieldname: req.file.fieldname,
+            originalname: req.file.originalname,
+            mimetype: req.file.mimetype,
+            size: req.file.size,
+            hasBuffer: !!req.file.buffer
+        });
+
+        // Verificar se o buffer existe
+        if (!req.file.buffer) {
+            console.error("❌ req.file.buffer não existe!");
+            return res.status(400).json({ error: "Erro ao processar imagem" });
+        }
+
         // ===========================================
         // OBTER ID DO USUÁRIO
         // ===========================================
         const usuarioIdFinal = await getUsuarioId(usuario_id, usuario_uuid);
+        console.log("👤 Usuário ID final:", usuarioIdFinal);
 
         // ===========================================
         // MODERAÇÃO DE TEXTO
@@ -205,10 +266,7 @@ router.post("/", upload.single("foto"), async (req,res)=>{
         // ===========================================
         console.log("✅ Imagem aprovada, fazendo upload...");
         
-        const uploadResult = await cloudinary.uploader.upload(
-            `data:${req.file.mimetype};base64,${req.file.buffer.toString('base64')}`,
-            { folder: "cidade-alerta" }
-        );
+        const uploadResult = await uploadToCloudinary(req.file.buffer, req.file.mimetype);
 
         // ===========================================
         // SALVAR NO BANCO
@@ -220,11 +278,7 @@ router.post("/", upload.single("foto"), async (req,res)=>{
             [textCheck.clean, categoria, latitude, longitude, uploadResult.secure_url, cidade_ibge, usuarioIdFinal]
         )
 
-        console.log("✅ Ocorrência criada com sucesso:", {
-            cidade: cidade_ibge,
-            categoria: categoria,
-            usuario_id: usuarioIdFinal
-        });
+        console.log("✅ Ocorrência criada com sucesso!");
 
         res.json({
             status: "ok", 
@@ -236,8 +290,9 @@ router.post("/", upload.single("foto"), async (req,res)=>{
         })
         
     } catch (error) {
-        console.error("❌ Erro ao criar ocorrência:", error)
-        res.status(500).json({ error: "Erro ao criar ocorrência" })
+        console.error("❌ Erro ao criar ocorrência:", error);
+        console.error("Stack:", error.stack);
+        res.status(500).json({ error: "Erro ao criar ocorrência: " + error.message })
     }
 })
 
@@ -310,16 +365,13 @@ router.put("/:id/concluir", async (req,res)=>{
             console.log(`📨 Mensagem criada para usuário ${dados.usuario_id}`)
             
             // ===========================================
-            // ENVIAR NOTIFICAÇÃO PUSH (FCM)
+            // ENVIAR NOTIFICAÇÃO PUSH (FCM) - Opcional por enquanto
             // ===========================================
-            if (dados.fcm_token) {
+            if (dados.fcm_token && false) { // Desabilitado temporariamente
                 try {
-                    // Verificar se o Firebase Admin está configurado
                     const admin = require('firebase-admin');
                     
-                    // Verificar se já foi inicializado
                     if (!admin.apps.length) {
-                        // Inicializar com as credenciais (usando variáveis de ambiente)
                         admin.initializeApp({
                             credential: admin.credential.cert({
                                 projectId: process.env.FIREBASE_PROJECT_ID,
@@ -341,21 +393,18 @@ router.put("/:id/concluir", async (req,res)=>{
                         token: dados.fcm_token
                     };
                     
-                    const response = await admin.messaging().send(message);
-                    console.log("✅ Notificação push enviada:", response);
+                    await admin.messaging().send(message);
+                    console.log("✅ Notificação push enviada");
                     
                 } catch (fcmError) {
-                    console.error("❌ Erro ao enviar notificação FCM:", fcmError.message);
-                    // Não falha a operação se a notificação falhar
+                    console.error("❌ Erro FCM:", fcmError.message);
                 }
-            } else {
-                console.log("⚠️ Usuário não tem token FCM, notificação não enviada");
             }
         }
         
         res.json({ 
             status: "concluido",
-            mensagem: "Ocorrência concluída e usuário notificado"
+            mensagem: "Ocorrência concluída e mensagem criada"
         })
         
     } catch (error) {
