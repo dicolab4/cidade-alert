@@ -265,6 +265,47 @@ router.get("/mensagens", auth, isAdmin, async (req, res) => {
     }
 })
 
+// ===========================================
+// SQL QUERY (apenas SELECT)
+// ===========================================
+router.post("/sql", auth, isAdmin, async (req, res) => {
+    try {
+        const { query } = req.body
+        
+        if (!query) {
+            return res.status(400).json({ error: "Query não fornecida" })
+        }
+        
+        // Verificar se é apenas SELECT (segurança)
+        const upperQuery = query.trim().toUpperCase()
+        if (!upperQuery.startsWith('SELECT')) {
+            return res.status(403).json({ error: "Apenas consultas SELECT são permitidas" })
+        }
+        
+        // Bloquear comandos perigosos
+        const dangerous = ['DROP', 'DELETE', 'UPDATE', 'INSERT', 'ALTER', 'CREATE', 'TRUNCATE']
+        for (const cmd of dangerous) {
+            if (upperQuery.includes(cmd)) {
+                return res.status(403).json({ error: `Comando ${cmd} não permitido` })
+            }
+        }
+        
+        const startTime = Date.now()
+        const result = await pool.query(query)
+        const executionTime = Date.now() - startTime
+        
+        res.json({
+            rows: result.rows,
+            rowCount: result.rowCount,
+            executionTime: executionTime
+        })
+        
+    } catch (error) {
+        console.error("❌ Erro na consulta SQL:", error)
+        res.status(500).json({ error: error.message })
+    }
+})
+
 // Buscar mensagem por ID
 router.get("/mensagens/:id", auth, isAdmin, async (req, res) => {
     try {
