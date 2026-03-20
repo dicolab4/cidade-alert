@@ -1,3 +1,4 @@
+// routes/admin.js
 const express = require("express")
 const router = express.Router()
 const pool = require("../db")
@@ -234,4 +235,213 @@ router.get("/estatisticas", auth, isAdmin, async (req, res) => {
     }
 })
 
-module.exports = router
+// ===========================================
+// MENSAGENS
+// ===========================================
+
+// Listar todas as mensagens
+router.get("/mensagens", auth, isAdmin, async (req, res) => {
+    try {
+        const { lida } = req.query
+        let query = `
+            SELECT m.*, u.email as usuario_email
+            FROM mensagens m
+            LEFT JOIN usuarios u ON m.usuario_id = u.id
+        `
+        let params = []
+        
+        if (lida !== undefined) {
+            query += " WHERE m.lida = $1"
+            params = [lida === 'true']
+        }
+        
+        query += " ORDER BY m.created_at DESC"
+        
+        const result = await pool.query(query, params)
+        res.json(result.rows)
+    } catch (error) {
+        console.error("Erro ao listar mensagens:", error)
+        res.status(500).json({ error: "Erro ao listar mensagens" })
+    }
+})
+
+// Buscar mensagem por ID
+router.get("/mensagens/:id", auth, isAdmin, async (req, res) => {
+    try {
+        const result = await pool.query(`
+            SELECT m.*, u.email as usuario_email
+            FROM mensagens m
+            LEFT JOIN usuarios u ON m.usuario_id = u.id
+            WHERE m.id = $1
+        `, [req.params.id])
+        
+        if (result.rows.length === 0) {
+            return res.status(404).json({ error: "Mensagem não encontrada" })
+        }
+        
+        res.json(result.rows[0])
+    } catch (error) {
+        console.error("Erro ao buscar mensagem:", error)
+        res.status(500).json({ error: "Erro ao buscar mensagem" })
+    }
+})
+
+// ===========================================
+// OCORRÊNCIAS (para admin)
+// ===========================================
+
+// Listar ocorrências com filtros
+router.get("/ocorrencias", auth, isAdmin, async (req, res) => {
+    try {
+        const { status, cidade } = req.query
+        let query = `
+            SELECT o.*, 
+                   u.email as usuario_email,
+                   c.nome as cidade_nome,
+                   e.uf
+            FROM ocorrencias o
+            LEFT JOIN usuarios u ON o.usuario_id = u.id
+            LEFT JOIN cidades c ON o.cidade_ibge = c.codigo_ibge
+            LEFT JOIN estados e ON c.codigo_uf = e.codigo_uf
+            WHERE 1=1
+        `
+        let params = []
+        let paramIndex = 1
+        
+        if (status) {
+            query += ` AND o.status = $${paramIndex++}`
+            params.push(status)
+        }
+        if (cidade) {
+            query += ` AND o.cidade_ibge = $${paramIndex++}`
+            params.push(cidade)
+        }
+        
+        query += " ORDER BY o.data_criacao DESC"
+        
+        const result = await pool.query(query, params)
+        res.json(result.rows)
+    } catch (error) {
+        console.error("Erro ao listar ocorrências:", error)
+        res.status(500).json({ error: "Erro ao listar ocorrências" })
+    }
+})
+
+// Buscar ocorrência por ID
+router.get("/ocorrencias/:id", auth, isAdmin, async (req, res) => {
+    try {
+        const result = await pool.query(`
+            SELECT o.*, u.email as usuario_email, c.nome as cidade_nome
+            FROM ocorrencias o
+            LEFT JOIN usuarios u ON o.usuario_id = u.id
+            LEFT JOIN cidades c ON o.cidade_ibge = c.codigo_ibge
+            WHERE o.id = $1
+        `, [req.params.id])
+        
+        if (result.rows.length === 0) {
+            return res.status(404).json({ error: "Ocorrência não encontrada" })
+        }
+        
+        res.json(result.rows[0])
+    } catch (error) {
+        console.error("Erro ao buscar ocorrência:", error)
+        res.status(500).json({ error: "Erro ao buscar ocorrência" })
+    }
+})
+
+// Concluir ocorrência (admin) - ENVIAR NOTIFICAÇÃO
+router.put("/ocorrencias/:id/concluir", auth, isAdmin, async (req, res) => {
+    try {
+        const { id } = req.params
+        
+        // Buscar ocorrência com dados do usuário
+        const ocorrencia = await pool.query(`
+            SELECT o.*, 
+                   u.fcm_token, 
+                   u.id as usuario_id,
+                   u.email as usuario_email,
+                   c.nome as cidade_nome
+            FROM ocorrencias o
+            LEFT JOIN usuarios u ON o.usuario_id = u.id
+            LEFT JOIN cidades c ON o.cidade_ibge = c.codigo_ibge
+            WHERE o.id = $1
+        `, [id])
+        
+        if (ocorrencia.rows.length === 0) {
+            return res.status(404).json({ error: "Ocorrência não encontrada" })
+        }
+        
+        const dados = ocorrencia.rows[0]
+        
+        // Atualizar status
+        await pool.query(
+            `UPDATE ocorrencias
+             SET status='concluido', data_conclusao=NOW()
+             WHERE id=$1`,
+            [id]
+        )
+        
+        // Criar mensagem no banco
+        if (dados.usuario_id) {
+            const titulo = "✅ Ocorrência concluída!"
+            const mensagem = `Sua denúncia de "${dados.categoria}" em ${dados.cidade_nome} foi resolvida. Obrigado por ajudar a cidade!`
+            
+            await pool.query(
+                `INSERT INTO mensagens (usuario_id, ocorrencia_id, titulo, mensagem)
+                 VALUES ($1, $2, $3, $4)`,
+                [dados.usuario_id, id, titulo, mensagem]
+            )
+            console.log(`📨 Mensagem criada para usuário ${dados.usuario_id}`)
+        }
+        
+        // Atualizar estatísticas
+        const stats = await pool.query(`
+            SELECT COUNT(*) as total_mensagens FROM mensagens
+        `)
+        
+        res.json({ 
+            status: "concluido",
+            mensagem: "Ocorrência concluída e usuário notificado",
+            total_mensagens: stats.rows[0].total_mensagens
+        })
+        
+    } catch (error) {
+        console.error("❌ Erro ao concluir ocorrência:", error)
+        res.status(500).json({ error: "Erro ao concluir ocorrência" })
+    }
+})
+
+// Atualizar estatísticas com total de mensagens
+router.get("/estatisticas", auth, isAdmin, async (req, res) => {
+    try {
+        const totalUsuarios = await pool.query("SELECT COUNT(*) FROM usuarios")
+        const totalOcorrencias = await pool.query("SELECT COUNT(*) FROM ocorrencias")
+        const totalMensagens = await pool.query("SELECT COUNT(*) FROM mensagens")
+        const usuariosPorTipo = await pool.query(`
+            SELECT 
+                SUM(CASE WHEN tipo = 1 THEN 1 ELSE 0 END) as admins,
+                SUM(CASE WHEN tipo = 2 THEN 1 ELSE 0 END) as moderadores,
+                SUM(CASE WHEN tipo = 3 THEN 1 ELSE 0 END) as comuns
+            FROM usuarios
+        `)
+        const ocorrenciasPorStatus = await pool.query(`
+            SELECT status, COUNT(*) 
+            FROM ocorrencias 
+            GROUP BY status
+        `)
+        
+        res.json({
+            total_usuarios: parseInt(totalUsuarios.rows[0].count),
+            total_ocorrencias: parseInt(totalOcorrencias.rows[0].count),
+            total_mensagens: parseInt(totalMensagens.rows[0].count),
+            usuarios_por_tipo: usuariosPorTipo.rows[0],
+            ocorrencias_por_status: ocorrenciasPorStatus.rows
+        })
+        
+    } catch (error) {
+        console.error("Erro ao buscar estatísticas:", error)
+        res.status(500).json({ error: "Erro ao buscar estatísticas" })
+    }
+})
+
+module.exports = router 
