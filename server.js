@@ -10,6 +10,7 @@ const cidades = require("./routes/cidades")
 const estados = require("./routes/estados")  // NOVA ROTA
 const migrate = require("./migrate")
 const admin = require("./routes/admin")
+const usuariosRouter = require("./routes/usuarios")
 
 const app = express()
 
@@ -25,6 +26,7 @@ app.use("/api/auth", auth)
 app.use("/api/cidades", cidades)
 app.use("/api/estados", estados)  // NOVA ROTA
 app.use("/api/admin", admin)
+app.use("/api/usuarios", usuariosRouter.router)
 
 // Rotas do frontend
 app.get("/", (req,res)=>{
@@ -61,7 +63,6 @@ async function start(){
 
 start()
 
-// funcionando sem rota para estados
 // require("dotenv").config() 
 
 // const express = require("express")

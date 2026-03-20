@@ -7,7 +7,7 @@ async function migrate(){
 // ===========================================
 // console.log("🧹 Limpando banco de dados...")
 // await pool.query(`DROP TABLE IF EXISTS ocorrencias CASCADE;`)
-//await pool.query(`DROP TABLE IF EXISTS usuarios CASCADE;`)
+// await pool.query(`DROP TABLE IF EXISTS usuarios CASCADE;`)
 // await pool.query(`DROP TABLE IF EXISTS cidades CASCADE;`)
 // await pool.query(`DROP TABLE IF EXISTS estados CASCADE;`)
 // console.log("✅ Banco limpo!")
@@ -54,6 +54,221 @@ CREATE TABLE IF NOT EXISTS usuarios (
     cidade_ibge INT REFERENCES cidades(codigo_ibge)
 );
 `)
+
+// ===========================================
+// ATUALIZAR TABELA USUARIOS (APENAS SE NECESSÁRIO)
+// ===========================================
+console.log("👑 Verificando/atualizando campos da tabela usuarios...")
+
+// ===========================================
+// 1. UUID - Identificador único para usuários anônimos
+// ===========================================
+await pool.query(`
+DO $$ 
+BEGIN 
+    IF NOT EXISTS (
+        SELECT 1 
+        FROM information_schema.columns 
+        WHERE table_name='usuarios' AND column_name='uuid'
+    ) THEN
+        ALTER TABLE usuarios 
+        ADD COLUMN uuid VARCHAR(36) UNIQUE;
+        
+        -- Gerar UUID para usuários existentes (opcional)
+        UPDATE usuarios SET uuid = gen_random_uuid()::VARCHAR WHERE uuid IS NULL;
+    END IF;
+END $$;
+`)
+
+// ===========================================
+// 2. NOME - Nome do cidadão (opcional)
+// ===========================================
+await pool.query(`
+DO $$ 
+BEGIN 
+    IF NOT EXISTS (
+        SELECT 1 
+        FROM information_schema.columns 
+        WHERE table_name='usuarios' AND column_name='nome'
+    ) THEN
+        ALTER TABLE usuarios 
+        ADD COLUMN nome VARCHAR(100);
+    END IF;
+END $$;
+`)
+
+// ===========================================
+// 3. TELEFONE - Telefone para contato (opcional)
+// ===========================================
+await pool.query(`
+DO $$ 
+BEGIN 
+    IF NOT EXISTS (
+        SELECT 1 
+        FROM information_schema.columns 
+        WHERE table_name='usuarios' AND column_name='telefone'
+    ) THEN
+        ALTER TABLE usuarios 
+        ADD COLUMN telefone VARCHAR(20);
+    END IF;
+END $$;
+`)
+
+// ===========================================
+// 4. FCM_TOKEN - Token do Firebase Cloud Messaging
+// ===========================================
+await pool.query(`
+DO $$ 
+BEGIN 
+    IF NOT EXISTS (
+        SELECT 1 
+        FROM information_schema.columns 
+        WHERE table_name='usuarios' AND column_name='fcm_token'
+    ) THEN
+        ALTER TABLE usuarios 
+        ADD COLUMN fcm_token TEXT;
+    END IF;
+END $$;
+`)
+
+// ===========================================
+// 5. ULTIMO_ACESSO - Timestamp do último login
+// ===========================================
+await pool.query(`
+DO $$ 
+BEGIN 
+    IF NOT EXISTS (
+        SELECT 1 
+        FROM information_schema.columns 
+        WHERE table_name='usuarios' AND column_name='ultimo_acesso'
+    ) THEN
+        ALTER TABLE usuarios 
+        ADD COLUMN ultimo_acesso TIMESTAMP;
+    END IF;
+END $$;
+`)
+
+// ===========================================
+// 6. TIPO (se não existir) - 1=admin, 2=mod, 3=cidadão
+// ===========================================
+await pool.query(`
+DO $$ 
+BEGIN 
+    IF NOT EXISTS (
+        SELECT 1 
+        FROM information_schema.columns 
+        WHERE table_name='usuarios' AND column_name='tipo'
+    ) THEN
+        ALTER TABLE usuarios 
+        ADD COLUMN tipo INTEGER DEFAULT 3;
+    END IF;
+END $$;
+`)
+
+// ===========================================
+// 7. ATIVO (se não existir)
+// ===========================================
+await pool.query(`
+DO $$ 
+BEGIN 
+    IF NOT EXISTS (
+        SELECT 1 
+        FROM information_schema.columns 
+        WHERE table_name='usuarios' AND column_name='ativo'
+    ) THEN
+        ALTER TABLE usuarios 
+        ADD COLUMN ativo BOOLEAN DEFAULT true;
+    END IF;
+END $$;
+`)
+
+// ===========================================
+// 8. CREATED_AT (se não existir)
+// ===========================================
+await pool.query(`
+DO $$ 
+BEGIN 
+    IF NOT EXISTS (
+        SELECT 1 
+        FROM information_schema.columns 
+        WHERE table_name='usuarios' AND column_name='created_at'
+    ) THEN
+        ALTER TABLE usuarios 
+        ADD COLUMN created_at TIMESTAMP DEFAULT NOW();
+    END IF;
+END $$;
+`)
+
+// ===========================================
+// 9. UPDATED_AT (se não existir) - Controle de alterações
+// ===========================================
+await pool.query(`
+DO $$ 
+BEGIN 
+    IF NOT EXISTS (
+        SELECT 1 
+        FROM information_schema.columns 
+        WHERE table_name='usuarios' AND column_name='updated_at'
+    ) THEN
+        ALTER TABLE usuarios 
+        ADD COLUMN updated_at TIMESTAMP DEFAULT NOW();
+    END IF;
+END $$;
+`)
+
+console.log("✅ Todos os campos da tabela usuarios verificados/atualizados")
+
+// ===========================================
+// 10. CRIAR ÍNDICES PARA MELHOR PERFORMANCE
+// ===========================================
+console.log("📊 Verificando/criando índices...")
+
+// Índice para uuid (usuários anônimos)
+await pool.query(`
+CREATE INDEX IF NOT EXISTS idx_usuarios_uuid ON usuarios(uuid);
+`)
+
+// Índice para email (login)
+await pool.query(`
+CREATE INDEX IF NOT EXISTS idx_usuarios_email ON usuarios(email) WHERE email IS NOT NULL;
+`)
+
+// Índice para token FCM
+await pool.query(`
+CREATE INDEX IF NOT EXISTS idx_usuarios_fcm ON usuarios(fcm_token);
+`)
+
+console.log("✅ Índices verificados/criados")
+
+// ===========================================
+// 11. GERAR UUID PARA USUÁRIOS EXISTENTES (caso não tenham)
+// ===========================================
+console.log("🆔 Verificando UUIDs para usuários existentes...")
+
+// Verificar se a função gen_random_uuid existe (PostgreSQL 13+)
+const hasUUID = await pool.query(`
+SELECT COUNT(*) FROM pg_proc WHERE proname = 'gen_random_uuid'
+`)
+
+if (hasUUID.rows[0].count > 0) {
+    await pool.query(`
+    UPDATE usuarios 
+    SET uuid = gen_random_uuid()::VARCHAR 
+    WHERE uuid IS NULL;
+    `)
+    console.log("✅ UUIDs gerados para usuários existentes")
+} else {
+    // Fallback para versões antigas do PostgreSQL
+    await pool.query(`
+    CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
+    UPDATE usuarios 
+    SET uuid = uuid_generate_v4()::VARCHAR 
+    WHERE uuid IS NULL;
+    `)
+    console.log("✅ UUIDs gerados usando uuid-ossp")
+}
+
+console.log("🎉 Tabela usuarios completamente atualizada!")
 
 // ===========================================
 // ATUALIZAR TABELA USUARIOS (ADICIONAR CAMPOS)
@@ -113,6 +328,92 @@ END $$;
 //     `)
 
 console.log("✅ Campos adicionados à tabela usuarios")
+
+// ===========================================
+// CRIAR TABELA DE MENSAGENS (versão robusta com verificações)
+// ===========================================
+console.log("📨 Verificando/criando tabela mensagens...")
+
+// Verificar se a tabela já existe
+const tabelaMensagens = await pool.query(`
+SELECT EXISTS (
+    SELECT FROM information_schema.tables 
+    WHERE table_name = 'mensagens'
+);
+`)
+
+if (!tabelaMensagens.rows[0].exists) {
+    console.log("📨 Criando tabela mensagens...")
+    
+    await pool.query(`
+    CREATE TABLE mensagens (
+        id SERIAL PRIMARY KEY,
+        usuario_id INTEGER REFERENCES usuarios(id) ON DELETE SET NULL,
+        ocorrencia_id INTEGER REFERENCES ocorrencias(id) ON DELETE SET NULL,
+        titulo VARCHAR(200) NOT NULL,
+        mensagem TEXT NOT NULL,
+        lida BOOLEAN DEFAULT false,
+        created_at TIMESTAMP DEFAULT NOW(),
+        data_leitura TIMESTAMP
+    );
+    `)
+    
+    console.log("✅ Tabela mensagens criada com sucesso!")
+} else {
+    console.log("✅ Tabela mensagens já existe, verificando estrutura...")
+    
+    // Verificar se a coluna data_leitura existe (caso precise adicionar depois)
+    await pool.query(`
+    DO $$ 
+    BEGIN 
+        IF NOT EXISTS (
+            SELECT 1 
+            FROM information_schema.columns 
+            WHERE table_name='mensagens' AND column_name='data_leitura'
+        ) THEN
+            ALTER TABLE mensagens 
+            ADD COLUMN data_leitura TIMESTAMP;
+        END IF;
+    END $$;
+    `)
+}
+
+// ===========================================
+// CRIAR ÍNDICES (sempre verificando existência)
+// ===========================================
+console.log("📊 Verificando/criando índices da tabela mensagens...")
+
+// Índice principal
+await pool.query(`
+CREATE INDEX IF NOT EXISTS idx_mensagens_usuario 
+ON mensagens(usuario_id, lida, created_at DESC);
+`)
+
+// Índice para mensagens não lidas
+await pool.query(`
+CREATE INDEX IF NOT EXISTS idx_mensagens_naolidas 
+ON mensagens(usuario_id) WHERE lida = false;
+`)
+
+// Índice para ocorrências
+await pool.query(`
+CREATE INDEX IF NOT EXISTS idx_mensagens_ocorrencia 
+ON mensagens(ocorrencia_id);
+`)
+
+console.log("✅ Índices da tabela mensagens verificados/criados")
+
+// ===========================================
+// MOSTRAR ESTATÍSTICAS (opcional)
+// ===========================================
+const statsMensagens = await pool.query(`
+SELECT 
+    COUNT(*) as total,
+    COUNT(CASE WHEN lida = false THEN 1 END) as nao_lidas
+FROM mensagens;
+`)
+
+console.log(`📊 Estatísticas de mensagens: ${statsMensagens.rows[0].total} total, ${statsMensagens.rows[0].nao_lidas} não lidas`)
 
 // 4. Criar tabela de ocorrencias
 console.log("📝 Verificando/criando tabela ocorrencias...")
@@ -5779,26 +6080,26 @@ const usuariosCount = await pool.query("SELECT COUNT(*) FROM usuarios")
 if (usuariosCount.rows[0].count === '0') {
     console.log("👑 Criando usuários admin...")
 
-    // Admin Volta Redonda comentar depois da primeira execução para evitar duplicidade
-    await pool.query(`
-    INSERT INTO usuarios (email, senha, cidade_ibge, tipo, ativo, created_at) 
-    VALUES ('admin@admin.com', '123456', 3306305, 1, TRUE, NOW())
-    ON CONFLICT (email) DO NOTHING;
-    `)
+    // // Admin Volta Redonda
+    // await pool.query(`
+    // INSERT INTO usuarios (email, senha, cidade_ibge, tipo, ativo, created_at) 
+    // VALUES ('admin@admin.com', '123456', 3306305, 1, TRUE, NOW())
+    // ON CONFLICT (email) DO NOTHING;
+    // `)
     
-    // Admin Volta Redonda
-    await pool.query(`
-    INSERT INTO usuarios (email, senha, cidade_ibge, tipo, ativo, created_at) 
-    VALUES ('voltaredonda@admin.com', '123456', 3306305, 3, TRUE, NOW())
-    ON CONFLICT (email) DO NOTHING;
-    `)
+    // // Admin Volta Redonda
+    // await pool.query(`
+    // INSERT INTO usuarios (email, senha, cidade_ibge) 
+    // VALUES ('voltaredonda@admin.com', '123456', 3306305)
+    // ON CONFLICT (email) DO NOTHING;
+    // `)
     
-    // Admin Barra Mansa
-    await pool.query(`
-    INSERT INTO usuarios (email, senha, cidade_ibge, tipo, ativo, created_at) 
-    VALUES ('barramansa@admin.com', '123456', 3300407, 3, TRUE, NOW())
-    ON CONFLICT (email) DO NOTHING;
-    `)
+    // // Admin Barra Mansa
+    // await pool.query(`
+    // INSERT INTO usuarios (email, senha, cidade_ibge) 
+    // VALUES ('barramansa@admin.com', '123456', 3300407)
+    // ON CONFLICT (email) DO NOTHING;
+    // `)
     
     console.log("✅ Usuários admin criados!")
 } else {
