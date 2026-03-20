@@ -7,7 +7,7 @@ async function migrate(){
 // ===========================================
 // console.log("🧹 Limpando banco de dados...")
 // await pool.query(`DROP TABLE IF EXISTS ocorrencias CASCADE;`)
-// await pool.query(`DROP TABLE IF EXISTS usuarios CASCADE;`)
+await pool.query(`DROP TABLE IF EXISTS usuarios CASCADE;`)
 // await pool.query(`DROP TABLE IF EXISTS cidades CASCADE;`)
 // await pool.query(`DROP TABLE IF EXISTS estados CASCADE;`)
 // console.log("✅ Banco limpo!")
@@ -44,16 +44,27 @@ CREATE TABLE IF NOT EXISTS cidades(
 );
 `)
 
-// 3. Criar tabela de usuarios
+// 3. Criar tabela de usuarios (VERSÃO COMPLETA)
 console.log("👤 Verificando/criando tabela usuarios...")
 await pool.query(`
 CREATE TABLE IF NOT EXISTS usuarios (
     id SERIAL PRIMARY KEY,
-    email VARCHAR(120) UNIQUE NOT NULL,
-    senha TEXT NOT NULL,
-    cidade_ibge INT REFERENCES cidades(codigo_ibge)
+    uuid VARCHAR(36) UNIQUE,
+    nome VARCHAR(100),
+    email VARCHAR(120) UNIQUE,
+    senha TEXT,
+    telefone VARCHAR(20),
+    cidade_ibge INT REFERENCES cidades(codigo_ibge),
+    tipo INTEGER DEFAULT 3,
+    ativo BOOLEAN DEFAULT true,
+    fcm_token TEXT,
+    created_at TIMESTAMP DEFAULT NOW(),
+    ultimo_acesso TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT NOW()
 );
 `)
+
+console.log("✅ Tabela usuarios criada/verificada")
 
 // ===========================================
 // ATUALIZAR TABELA USUARIOS (APENAS SE NECESSÁRIO)
@@ -6080,26 +6091,26 @@ const usuariosCount = await pool.query("SELECT COUNT(*) FROM usuarios")
 if (usuariosCount.rows[0].count === '0') {
     console.log("👑 Criando usuários admin...")
 
-    // // Admin Volta Redonda
-    // await pool.query(`
-    // INSERT INTO usuarios (email, senha, cidade_ibge, tipo, ativo, created_at) 
-    // VALUES ('admin@admin.com', '123456', 3306305, 1, TRUE, NOW())
-    // ON CONFLICT (email) DO NOTHING;
-    // `)
+    // Admin Geral
+    await pool.query(`
+    INSERT INTO usuarios (email, senha, cidade_ibge, tipo, ativo, created_at) 
+    VALUES ('admin@admin.com', '123456', 3306305, 1, TRUE, NOW())
+    ON CONFLICT (email) DO NOTHING;
+    `)
     
-    // // Admin Volta Redonda
-    // await pool.query(`
-    // INSERT INTO usuarios (email, senha, cidade_ibge) 
-    // VALUES ('voltaredonda@admin.com', '123456', 3306305)
-    // ON CONFLICT (email) DO NOTHING;
-    // `)
+    // Admin Volta Redonda
+    await pool.query(`
+    INSERT INTO usuarios (email, senha, cidade_ibge) 
+    VALUES ('voltaredonda@admin.com', '123456', 3306305)
+    ON CONFLICT (email) DO NOTHING;
+    `)
     
-    // // Admin Barra Mansa
-    // await pool.query(`
-    // INSERT INTO usuarios (email, senha, cidade_ibge) 
-    // VALUES ('barramansa@admin.com', '123456', 3300407)
-    // ON CONFLICT (email) DO NOTHING;
-    // `)
+    // Admin Barra Mansa
+    await pool.query(`
+    INSERT INTO usuarios (email, senha, cidade_ibge) 
+    VALUES ('barramansa@admin.com', '123456', 3300407)
+    ON CONFLICT (email) DO NOTHING;
+    `)
     
     console.log("✅ Usuários admin criados!")
 } else {
